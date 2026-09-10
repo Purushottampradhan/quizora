@@ -1,0 +1,275 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #100a24;
+  --bg-2: #1a1240;
+  --card: rgba(255, 255, 255, 0.07);
+  --line: rgba(255, 255, 255, 0.12);
+  --text: #f6f1ff;
+  --muted: #b8aed4;
+  --coral: #ff7a59;
+  --coral-2: #ff9a7a;
+  --violet: #8b7cff;
+  --mint: #3ee0b0;
+  --gold: #ffd166;
+  --danger: #ff5d7a;
+  font-family: "Nunito", system-ui, sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* { box-sizing: border-box; }
+html, body, #root { min-height: 100%; }
+body {
+  margin: 0;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #3a1d6e 0%, transparent 55%),
+    radial-gradient(900px 500px at 110% 10%, #6b2d4a 0%, transparent 50%),
+    radial-gradient(700px 400px at 50% 110%, #16385c 0%, transparent 55%),
+    var(--bg);
+  color: var(--text);
+}
+
+h1, h2, h3, h4, .font-display {
+  font-family: "Sora", system-ui, sans-serif;
+  letter-spacing: -0.03em;
+}
+
+button, input, select, textarea { font-family: inherit; }
+
+.glass {
+  background: linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04));
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.85rem 1.2rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease, filter 0.15s ease, box-shadow 0.15s ease;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn-primary {
+  background: linear-gradient(135deg, var(--coral), #ff4d7a);
+  color: #2a0b12;
+  box-shadow: 0 10px 24px rgba(255, 122, 89, 0.35);
+}
+.btn-primary:hover { filter: brightness(1.05); }
+.btn-ghost {
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+.btn-violet {
+  background: linear-gradient(135deg, #7c6cff, #5b4fe8);
+  color: white;
+  box-shadow: 0 10px 24px rgba(91, 79, 232, 0.35);
+}
+
+.field {
+  width: 100%;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(8, 4, 22, 0.45);
+  color: var(--text);
+  padding: 0.85rem 1rem;
+  outline: none;
+}
+.field:focus {
+  border-color: var(--violet);
+  box-shadow: 0 0 0 3px rgba(139, 124, 255, 0.25);
+}
+
+.option {
+  width: 100%;
+  text-align: left;
+  border-radius: 18px;
+  border: 1.5px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  padding: 0.95rem 1rem;
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.12s ease, background 0.12s ease;
+}
+.option:hover { transform: translateY(-1px); border-color: rgba(255,255,255,0.28); }
+.option.selected {
+  border-color: var(--coral);
+  background: rgba(255, 122, 89, 0.16);
+}
+.option.correct {
+  border-color: var(--mint);
+  background: rgba(62, 224, 176, 0.14);
+}
+.option.wrong {
+  border-color: var(--danger);
+  background: rgba(255, 93, 122, 0.14);
+}
+
+.quiz-shell {
+  height: 100dvh;
+  max-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.quiz-stem {
+  margin: 0.35rem 0 0;
+  font-family: "Sora", system-ui, sans-serif;
+  font-size: clamp(0.92rem, 3.4vw, 1.05rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.38;
+  color: var(--text);
+  white-space: normal;
+  overflow: visible;
+}
+.quiz-option {
+  width: 100%;
+  text-align: left;
+  border-radius: 12px;
+  border: 1.5px solid var(--line);
+  background: rgba(255,255,255,0.05);
+  color: var(--text);
+  padding: 0.55rem 0.7rem;
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  cursor: pointer;
+  min-height: 44px;
+  font-size: 0.9rem;
+  line-height: 1.35;
+  font-weight: 600;
+}
+.quiz-option:hover { border-color: rgba(255,255,255,0.28); }
+.quiz-option.selected {
+  border-color: var(--coral);
+  background: rgba(255, 122, 89, 0.16);
+}
+.quiz-letter {
+  width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.1);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+.quiz-pills {
+  display: flex;
+  gap: 0.3rem;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.quiz-pills::-webkit-scrollbar { display: none; }
+.q-pill {
+  min-width: 1.7rem;
+  height: 1.7rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-weight: 800;
+  font-size: 0.72rem;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.quiz-bar {
+  padding: 0.55rem 0.75rem calc(0.55rem + env(safe-area-inset-bottom));
+}
+.quiz-bar .btn {
+  padding: 0.65rem 0.7rem;
+  font-size: 0.86rem;
+}
+
+@media (max-width: 420px) {
+  .quiz-option { font-size: 0.86rem; padding: 0.48rem 0.6rem; }
+  .quiz-stem { font-size: 0.94rem; }
+}
+.q-pill.skipped {
+  background: rgba(255, 209, 102, 0.22);
+  border-color: rgba(255, 209, 102, 0.75);
+  color: var(--gold);
+}
+.q-pill.done {
+  background: rgba(62, 224, 176, 0.2);
+  border-color: rgba(62, 224, 176, 0.5);
+  color: var(--mint);
+}
+.q-pill.current {
+  background: var(--coral);
+  color: #2a0b12;
+  border-color: transparent;
+}
+
+.progress-track {
+  height: 5px;
+  border-radius: 99px;
+  background: rgba(255,255,255,0.1);
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--mint), var(--coral));
+}
+
+@keyframes pop {
+  from { transform: scale(0.92); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.pop { animation: pop 0.28s ease; }
+
+.score-ring {
+  --p: 0;
+  width: 148px;
+  height: 148px;
+  border-radius: 50%;
+  background: conic-gradient(var(--mint) calc(var(--p) * 1%), rgba(255,255,255,0.1) 0);
+  display: grid;
+  place-items: center;
+}
+.score-inner {
+  width: 118px;
+  height: 118px;
+  border-radius: 50%;
+  background: #160d32;
+  display: grid;
+  place-items: center;
+  font-family: "Sora", system-ui, sans-serif;
+  font-weight: 800;
+  font-size: 1.6rem;
+}
+select.field option {
+  color: #120c2a;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0,0,0,0);
+  border: 0;
+}

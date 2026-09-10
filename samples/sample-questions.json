@@ -1,0 +1,52 @@
+[
+  {
+    "question": "Which HTML tag creates the largest heading?",
+    "option_a": "<h6>",
+    "option_b": "<h1>",
+    "option_c": "<head>",
+    "option_d": "<header>",
+    "correct_answer": "B",
+    "explanation": "<h1> is the highest-level heading. Headings go from h1 (largest/most important) to h6 (smallest).",
+    "remark": "HTML basics"
+  },
+  {
+    "question": "What does CSS stand for?",
+    "option_a": "Computer Style Sheets",
+    "option_b": "Creative Styling System",
+    "option_c": "Cascading Style Sheets",
+    "option_d": "Colorful Style Syntax",
+    "correct_answer": "C",
+    "explanation": "CSS means Cascading Style Sheets. Cascade describes how styles override each other by origin, specificity, and order.",
+    "remark": "CSS basics"
+  },
+  {
+    "question": "Which JavaScript keyword declares a block-scoped variable you can reassign?",
+    "option_a": "var",
+    "option_b": "const",
+    "option_c": "let",
+    "option_d": "static",
+    "correct_answer": "C",
+    "explanation": "let is block-scoped and can be reassigned. const is block-scoped but cannot be reassigned. var is function-scoped.",
+    "remark": "JS variables"
+  },
+  {
+    "question": "In React, which hook holds component state?",
+    "option_a": "useRef",
+    "option_b": "useState",
+    "option_c": "useMemo",
+    "option_d": "useId",
+    "correct_answer": "B",
+    "explanation": "useState returns a state value and a setter. Updating state triggers a re-render of the component.",
+    "remark": "React hooks"
+  },
+  {
+    "question": "Which HTTP method is typically used to create a new resource?",
+    "option_a": "GET",
+    "option_b": "POST",
+    "option_c": "HEAD",
+    "option_d": "OPTIONS",
+    "correct_answer": "B",
+    "explanation": "POST is commonly used to create a resource. GET should not have side effects. PUT/PATCH update existing resources.",
+    "remark": "HTTP"
+  }
+]

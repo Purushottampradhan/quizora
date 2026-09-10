@@ -1,0 +1,22 @@
+# dependencies / build
+node_modules/
+dist/
+client/dist/
+server/dist/
+uploads/
+
+# secrets — never commit real keys
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.key
+credentials.json
+service-account*.json
+
+# local / OS
+.DS_Store
+*.log
+.vscode/
+.idea/
