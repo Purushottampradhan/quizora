@@ -17,7 +17,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/admin/login" element={<Login />} />
-          <Route path="/admin/signup" element={<Login />} />
+          <Route path="/admin/signup" element={<Navigate to="/admin/login" replace />} />
           <Route element={<Protected />}>
             <Route path="/admin" element={<AdminShell />}>
               <Route index element={<Dashboard />} />

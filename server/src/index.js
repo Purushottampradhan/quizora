@@ -39,6 +39,15 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true, name: 'quizora' });
 });
 
+function rejectSignup(_req, res) {
+  res.status(403).json({ error: 'Signups are disabled' });
+}
+
+app.all('/api/signup', rejectSignup);
+app.all('/api/auth/signup', rejectSignup);
+app.all('/api/admin/signup', rejectSignup);
+app.all('/api/public/signup', rejectSignup);
+
 app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 

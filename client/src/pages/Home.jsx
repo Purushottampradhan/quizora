@@ -7,11 +7,8 @@ export default function Home() {
       <header className="flex items-center justify-between">
         <Logo />
         <div className="flex gap-2">
-          <Link className="btn btn-ghost px-4 py-2 text-sm" to="/admin/login">
+          <Link className="btn btn-primary px-4 py-2 text-sm" to="/admin/login">
             Sign in
-          </Link>
-          <Link className="btn btn-primary px-4 py-2 text-sm" to="/admin/signup">
-            Sign up
           </Link>
         </div>
       </header>
@@ -28,10 +25,7 @@ export default function Home() {
             Create an exam, upload questions, share one link. Students type their name, tap answers, and get a full review plus AI study tips.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
-            <Link className="btn btn-primary" to="/admin/signup">
-              Create admin account
-            </Link>
-            <Link className="btn btn-ghost" to="/admin/login">
+            <Link className="btn btn-primary" to="/admin/login">
               Sign in
             </Link>
           </div>

@@ -5,7 +5,7 @@ Mobile-friendly MCQ exam platform: React + Express + Supabase, with Groq AI stud
 ## What you get
 
 **Admin (3 screens)**
-1. Sign up / sign in
+1. Sign in
 2. Dashboard — create exams, copy the public link
 3. Exam page — upload questions (JSON / CSV / Excel), add a single question, see every attempt with total time and time per question
 
@@ -20,9 +20,8 @@ Mobile-friendly MCQ exam platform: React + Express + Supabase, with Groq AI stud
 
 1. Create a project at [supabase.com](https://supabase.com)
 2. SQL Editor → paste and run `supabase/schema.sql`
-3. Open `/admin/signup` and create an account.
-   If signup says **Database error saving new user**, run `supabase/fix-signup.sql` in the SQL Editor (this project still has a Connect auth trigger), then try again.
-   If confirmation emails are enabled, confirm the inbox link, then sign in at `/admin/login`.
+3. Open `/admin/login` and sign in with an existing admin account.
+   New public signups are disabled. To lock this at the database too, run `supabase/disable-signup.sql` in the SQL Editor, and in Supabase go to **Authentication → Providers → Email** and turn off **Allow new users to sign up**.
 
 ### 2. Groq (AI tips)
 
@@ -77,8 +76,7 @@ JSON is an array of those objects. Excel uses the first sheet. A template downlo
 | Who | Route | Purpose |
 |---|---|---|
 | Anyone | `/` | Product home |
-| Admin | `/admin/signup` | Create account |
-| Admin | `/admin/login` | Sign in |
+| Admin | `/admin/login` | Sign in (signups disabled) |
 | Admin | `/admin` | Exams + create + copy link |
 | Admin | `/admin/exams/:id` | Questions, attempts, share, settings |
 | Student | `/e/:slug` | Name + start |

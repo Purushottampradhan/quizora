@@ -40,25 +40,6 @@ export function AuthProvider({ children }) {
           throw err;
         }
       },
-      async signUp(email, password) {
-        setError('');
-        if (!supabase) throw new Error('Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in quizora/.env');
-        const { data, error: err } = await supabase.auth.signUp({
-          email,
-          password,
-          options: { emailRedirectTo: `${window.location.origin}/admin/login` },
-        });
-        if (err) {
-          setError(err.message);
-          throw err;
-        }
-        if (data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-          const exists = new Error('An account with this email already exists. Sign in instead.');
-          setError(exists.message);
-          throw exists;
-        }
-        return data;
-      },
       async signOut() {
         await supabase?.auth.signOut();
       },

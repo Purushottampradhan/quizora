@@ -84,8 +84,19 @@ Do **not** commit `.env`. It is already gitignored.
    | Build Command | `npm install && npm run build` |
    | Publish Directory | `dist` |
 
-3. Redirects/rewrites: **Rewrite** `/*` → `/index.html`  
-   (needed so `/admin/login` and `/e/your-exam` work). `client/public/_redirects` is already in the repo.
+3. **Required — SPA rewrite** (without this, `/e/your-exam` and refresh on `/admin/...` show Render’s “Not Found”):
+
+   Open the **quizora-web** service → **Redirects/Rewrites** → **Add Rule**:
+
+   | Field | Value |
+   |---|---|
+   | Source | `/*` |
+   | Destination | `/index.html` |
+   | Action | **Rewrite** (not Redirect) |
+
+   Save. You do **not** need to rebuild. Then open the student link again.
+
+   `client/public/_redirects` is ignored by Render (it is only a Netlify-style file). The dashboard rule is what actually works.
 
 4. Environment variables (baked in at **build** time):
 
