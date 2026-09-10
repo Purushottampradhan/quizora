@@ -1,6 +1,6 @@
 import Groq from 'groq-sdk';
 
-const MAX_QUESTIONS = 50;
+const MAX_QUESTIONS = 500;
 const DEFAULT_MODELS = [
   'openai/gpt-oss-20b',
   'openai/gpt-oss-120b',

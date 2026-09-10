@@ -248,7 +248,7 @@ export default function ExamDetail() {
             </button>
           </div>
           <p className="mt-2 text-sm text-[var(--muted)]">
-            Columns: question, option_a–d, correct_answer (A–D), explanation, remark. Max 50 questions. Sample files live in{' '}
+            Columns: question, option_a–d, correct_answer (A–D), explanation, remark. Max 500 questions. Sample files live in{' '}
             <code>quizora/samples</code>.
           </p>
 

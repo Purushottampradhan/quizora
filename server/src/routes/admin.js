@@ -3,6 +3,9 @@ import multer from 'multer';
 import { requireAdmin } from '../middleware/auth.js';
 import { parseQuestionFile, buildExcelTemplateBuffer } from '../services/parseQuestions.js';
 
+const MAX_QUESTIONS = 500;
+const INSERT_CHUNK = 100;
+
 const router = Router();
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -45,10 +48,15 @@ router.get('/exams', requireAdmin, async (req, res) => {
   const ids = (exams || []).map((e) => e.id);
   const counts = {};
   if (ids.length) {
-    const { data: qs } = await req.sb.from('questions').select('exam_id').in('exam_id', ids);
+    for (const id of ids) {
+      counts[id] = { questions: 0, attempts: 0, submitted: 0 };
+      const { count } = await req.sb
+        .from('questions')
+        .select('id', { count: 'exact', head: true })
+        .eq('exam_id', id);
+      counts[id].questions = count || 0;
+    }
     const { data: atts } = await req.sb.from('attempts').select('exam_id, submitted_at, score, total_questions').in('exam_id', ids);
-    for (const q of qs || []) counts[q.exam_id] = counts[q.exam_id] || { questions: 0, attempts: 0, submitted: 0 };
-    for (const q of qs || []) counts[q.exam_id].questions += 1;
     for (const a of atts || []) {
       counts[a.exam_id] = counts[a.exam_id] || { questions: 0, attempts: 0, submitted: 0 };
       counts[a.exam_id].attempts += 1;
@@ -100,7 +108,8 @@ router.get('/exams/:id', requireAdmin, async (req, res) => {
     .from('questions')
     .select('*')
     .eq('exam_id', exam.id)
-    .order('order_index', { ascending: true });
+    .order('order_index', { ascending: true })
+    .range(0, MAX_QUESTIONS - 1);
 
   res.json({ exam, questions: questions || [] });
 });
@@ -151,8 +160,8 @@ router.post('/exams/:id/questions', requireAdmin, async (req, res) => {
     .from('questions')
     .select('id', { count: 'exact', head: true })
     .eq('exam_id', exam.id);
-  if ((count || 0) >= 50) {
-    return res.status(400).json({ error: 'An exam can have at most 50 questions' });
+  if ((count || 0) >= MAX_QUESTIONS) {
+    return res.status(400).json({ error: `An exam can have at most ${MAX_QUESTIONS} questions` });
   }
   const order_index = (last?.[0]?.order_index ?? -1) + 1;
 
@@ -197,9 +206,9 @@ router.post('/exams/:id/questions/upload', requireAdmin, upload.single('file'), 
       .from('questions')
       .select('id', { count: 'exact', head: true })
       .eq('exam_id', exam.id);
-    const remaining = 50 - (count || 0);
+    const remaining = MAX_QUESTIONS - (count || 0);
     if (remaining <= 0) {
-      return res.status(400).json({ error: 'An exam can have at most 50 questions' });
+      return res.status(400).json({ error: `An exam can have at most ${MAX_QUESTIONS} questions` });
     }
     const toAdd = questions.slice(0, remaining);
     const { data: last } = await req.sb
@@ -210,13 +219,18 @@ router.post('/exams/:id/questions/upload', requireAdmin, upload.single('file'), 
       .limit(1);
     let start = (last?.[0]?.order_index ?? -1) + 1;
     const rows = toAdd.map((q, i) => ({ ...q, exam_id: exam.id, order_index: start + i }));
-    const { data, error } = await req.sb.from('questions').insert(rows).select();
-    if (error) return res.status(500).json({ error: error.message });
+    const added = [];
+    for (let i = 0; i < rows.length; i += INSERT_CHUNK) {
+      const chunk = rows.slice(i, i + INSERT_CHUNK);
+      const { data, error } = await req.sb.from('questions').insert(chunk).select();
+      if (error) return res.status(500).json({ error: error.message });
+      added.push(...(data || []));
+    }
     const warnings = [...(errors || [])];
     if (questions.length > toAdd.length) {
-      warnings.push(`Only ${toAdd.length} questions were added (50 max per exam).`);
+      warnings.push(`Only ${toAdd.length} questions were added (${MAX_QUESTIONS} max per exam).`);
     }
-    res.json({ added: data.length, warnings, questions: data });
+    res.json({ added: added.length, warnings, questions: added });
   } catch (err) {
     res.status(400).json({ error: err.message || 'Could not parse file' });
   }
@@ -338,7 +352,8 @@ router.get('/attempts/:attemptId', requireAdmin, async (req, res) => {
     .from('questions')
     .select('*')
     .eq('exam_id', exam.id)
-    .order('order_index', { ascending: true });
+    .order('order_index', { ascending: true })
+    .range(0, MAX_QUESTIONS - 1);
   const { data: answers } = await req.sb
     .from('attempt_answers')
     .select('*')
