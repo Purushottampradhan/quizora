@@ -5,6 +5,7 @@ import { useAuth } from '../../lib/AuthContext.jsx';
 import { formatDuration } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
 import Spinner from '../../components/Spinner.jsx';
+import ShareLinks from './ShareLinks.jsx';
 
 const emptyQ = {
   question_text: '',
@@ -23,6 +24,7 @@ export default function ExamDetail() {
   const [tab, setTab] = useState('questions');
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
+  const [papers, setPapers] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -31,12 +33,15 @@ export default function ExamDetail() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [uploading, setUploading] = useState(false);
+  const [clearing, setClearing] = useState(false);
+  const [confirmClear, setConfirmClear] = useState(false);
   const [detail, setDetail] = useState(null);
 
   async function loadExam() {
     const data = await api(`/api/admin/exams/${id}`, { token });
     setExam(data.exam);
     setQuestions(data.questions || []);
+    setPapers(data.papers || []);
   }
 
   async function loadAttempts() {
@@ -139,6 +144,21 @@ export default function ExamDetail() {
     await loadExam();
   }
 
+  async function removeAllQuestions() {
+    setClearing(true);
+    setError('');
+    try {
+      await api(`/api/admin/exams/${id}/questions`, { token, method: 'DELETE' });
+      setConfirmClear(false);
+      cancelForm();
+      await loadExam();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setClearing(false);
+    }
+  }
+
   async function openAttempt(attemptId) {
     const data = await api(`/api/admin/attempts/${attemptId}`, { token });
     setDetail(data);
@@ -165,7 +185,7 @@ export default function ExamDetail() {
       </div>
 
       <div className="glass mt-5 rounded-3xl p-4">
-        <p className="text-xs font-extrabold tracking-wide text-[var(--muted)]">SHARE LINK</p>
+        <p className="text-xs font-extrabold tracking-wide text-[var(--muted)]">DEFAULT SHARE LINK</p>
         <div className="mt-2 flex flex-col gap-2 sm:flex-row">
           <input className="field" readOnly value={link} />
           <div className="flex gap-2">
@@ -177,11 +197,13 @@ export default function ExamDetail() {
             </a>
           </div>
         </div>
+        <p className="mt-2 text-xs text-[var(--muted)]">Practice, shuffle, negative marks, and 1–20 / 21–40 sets are in the Links tab.</p>
       </div>
 
       <div className="mt-5 flex gap-2 rounded-full bg-white/5 p-1">
         {[
           ['questions', `Questions (${questions.length})`],
+          ['links', `Links (${papers.length})`],
           ['attempts', `Attempts (${attempts.length})`],
           ['settings', 'Settings'],
         ].map(([key, label]) => (
@@ -199,6 +221,10 @@ export default function ExamDetail() {
 
       {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
 
+      {tab === 'links' && (
+        <ShareLinks examId={id} token={token} questions={questions} papers={papers} onChanged={loadExam} />
+      )}
+
       {tab === 'questions' && (
         <div className="mt-5">
           <div className="flex flex-wrap gap-2">
@@ -215,7 +241,8 @@ export default function ExamDetail() {
               type="button"
               className="btn btn-ghost px-4 py-2 text-sm"
               onClick={async () => {
-                const res = await fetch('/api/admin/template.xlsx', {
+                const base = String(import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+                const res = await fetch(`${base}/api/admin/template.xlsx`, {
                   headers: { Authorization: `Bearer ${token}` },
                 });
                 if (!res.ok) {
@@ -245,6 +272,13 @@ export default function ExamDetail() {
               }}
             >
               {showForm ? 'Hide form' : 'Add one question'}
+            </button>
+            <button
+              className="btn btn-ghost px-4 py-2 text-sm text-[var(--danger)]"
+              disabled={!questions.length || clearing}
+              onClick={() => setConfirmClear(true)}
+            >
+              Delete all questions
             </button>
           </div>
           <p className="mt-2 text-sm text-[var(--muted)]">
@@ -415,6 +449,25 @@ export default function ExamDetail() {
           <button className="btn btn-primary w-fit">Save settings</button>
         </form>
       )}
+
+      <Modal open={confirmClear} title="Delete all questions?" onClose={() => !clearing && setConfirmClear(false)}>
+        <p className="text-[var(--muted)]">
+          This will permanently remove all {questions.length} question{questions.length === 1 ? '' : 's'} from this exam.
+          Answer rows tied to those questions will also be removed. The exam and student attempts stay.
+        </p>
+        <div className="mt-4 flex gap-2">
+          <button className="btn btn-ghost flex-1" disabled={clearing} onClick={() => setConfirmClear(false)}>
+            Cancel
+          </button>
+          <button
+            className="btn btn-primary flex-1 bg-[var(--danger)]"
+            disabled={clearing}
+            onClick={removeAllQuestions}
+          >
+            {clearing ? 'Deleting…' : 'Delete all'}
+          </button>
+        </div>
+      </Modal>
 
       <Modal open={Boolean(detail)} title={detail ? `${detail.attempt.candidate_name}'s attempt` : ''} onClose={() => setDetail(null)} wide>
         {detail && (

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { api } from '../../lib/api.js';
-import { formatDuration, percent } from '../../lib/format.js';
+import { formatDuration, percent, formatMarks } from '../../lib/format.js';
 import Logo from '../../components/Logo.jsx';
 import Spinner from '../../components/Spinner.jsx';
 
@@ -68,7 +68,8 @@ export default function Result() {
   if (!data) return <Spinner label="Crunching results" />;
 
   const { attempt, exam, details } = data;
-  const pct = percent(attempt.score, attempt.total_questions);
+  const maxScore = Number(attempt.max_score) || attempt.total_questions || details.length;
+  const pct = percent(Math.max(0, attempt.score), maxScore);
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-8">
@@ -76,12 +77,22 @@ export default function Result() {
       <section className="glass mt-8 rounded-3xl p-6 text-center">
         <p className="text-sm text-[var(--muted)]">Nice work, {attempt.candidate_name}</p>
         <h1 className="font-display mt-1 text-3xl font-extrabold">{exam.title}</h1>
+        {exam.paper_title && exam.paper_title !== exam.title && (
+          <p className="mt-1 text-[var(--gold)]">{exam.paper_title}</p>
+        )}
+        <p className="mt-2 text-xs font-extrabold tracking-wide text-[var(--coral-2)]">
+          {attempt.mode === 'practice' ? 'PRACTICE' : 'EXAM'}
+        </p>
         <div className="score-ring mx-auto mt-6" style={{ '--p': pct }}>
           <div className="score-inner">
-            {attempt.score}/{attempt.total_questions}
+            {formatMarks(attempt.score)}/{formatMarks(maxScore)}
           </div>
         </div>
         <p className="mt-4 text-lg font-bold">{pct}% · {formatDuration(attempt.time_taken_ms)} total</p>
+        <p className="text-sm text-[var(--muted)]">
+          {attempt.correct_count ?? '—'} correct · {attempt.wrong_count ?? 0} wrong · {attempt.skip_count ?? 0} skipped
+          {Number(attempt.minus_mark) > 0 ? ` · +${formatMarks(attempt.plus_mark)} / −${formatMarks(attempt.minus_mark)}` : ''}
+        </p>
         <p className="text-sm text-[var(--muted)]">
           Average {formatDuration((attempt.time_taken_ms || 0) / Math.max(1, details.length))} per question
         </p>

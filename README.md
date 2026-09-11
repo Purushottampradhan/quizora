@@ -1,6 +1,6 @@
 # Quizora
 
-Mobile-friendly MCQ exam platform: React + Express + Supabase, with Groq AI study tips after each attempt.
+Mobile-friendly MCQ exam platform: React + Express + MongoDB Atlas, with Groq AI study tips after each attempt.
 
 ## What you get
 
@@ -16,12 +16,17 @@ Mobile-friendly MCQ exam platform: React + Express + Supabase, with Groq AI stud
 
 ## Setup
 
-### 1. Supabase
+### 1. MongoDB Atlas
 
-1. Create a project at [supabase.com](https://supabase.com)
-2. SQL Editor → paste and run `supabase/schema.sql`
-3. Open `/admin/login` and sign in with an existing admin account.
-   New public signups are disabled. To lock this at the database too, run `supabase/disable-signup.sql` in the SQL Editor, and in Supabase go to **Authentication → Providers → Email** and turn off **Allow new users to sign up**.
+1. Create a free cluster at [mongodb.com/atlas](https://www.mongodb.com/atlas)
+2. Create a database user and set **Network Access** to allow `0.0.0.0/0` (so Render can connect)
+3. Connection string must use database name **`quiz`**:
+
+```
+mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/quiz?retryWrites=true&w=majority&appName=Cluster0
+```
+
+The first API start creates collections automatically. If `ADMIN_EMAIL` and `ADMIN_PASSWORD` are set and no admin exists yet, that account is created. Signups stay disabled.
 
 ### 2. Groq (AI tips)
 
@@ -29,16 +34,19 @@ Create an API key at [console.groq.com/keys](https://console.groq.com/keys). Aft
 
 ### 3. Environment
 
-Copy `.env.example` to `.env` in this folder (`quizora/.env`). The Vite `VITE_*` keys are enough — the API reads the same file.
+Copy `.env.example` to `.env` in this folder (`quizora/.env`). The Vite `VITE_*` keys are enough for the client — the API reads the same file.
 
 ```
-VITE_SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-VITE_SUPABASE_ANON_KEY=your_publishable_or_anon_key
-SUPABASE_URL=https://YOUR_PROJECT.supabase.co
-SUPABASE_ANON_KEY=your_publishable_or_anon_key
+VITE_SITE_URL=http://localhost:5173
+VITE_API_URL=
 PORT=5050
 CLIENT_URL=http://localhost:5173
+MONGODB_URI=mongodb+srv://USER:PASSWORD@cluster0.xxxxx.mongodb.net/quiz?retryWrites=true&w=majority&appName=Cluster0
+JWT_SECRET=long-random-string
+ADMIN_EMAIL=you@example.com
+ADMIN_PASSWORD=your-admin-password
 GROQ_API_KEY=
+GROQ_MODEL=openai/gpt-oss-20b
 ```
 
 ### 4. Run

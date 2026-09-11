@@ -17,5 +17,11 @@ export function formatClock(ms) {
 
 export function percent(score, total) {
   if (!total) return 0;
-  return Math.round((score / total) * 100);
+  return Math.max(0, Math.round((Number(score) / Number(total)) * 100));
+}
+
+export function formatMarks(n) {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return '0';
+  return Number.isInteger(v) ? String(v) : v.toFixed(2).replace(/\.?0+$/, '');
 }

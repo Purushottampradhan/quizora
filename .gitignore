@@ -9,6 +9,8 @@ uploads/
 .env
 .env.*
 !.env.example
+atlas-credentials*.env
+*atlas-credentials*
 *.pem
 *.p12
 *.key

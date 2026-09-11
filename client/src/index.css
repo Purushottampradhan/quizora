@@ -159,6 +159,14 @@ button, input, select, textarea { font-family: inherit; }
   border-color: var(--coral);
   background: rgba(255, 122, 89, 0.16);
 }
+.quiz-option.correct {
+  border-color: var(--mint);
+  background: rgba(62, 224, 176, 0.14);
+}
+.quiz-option.wrong {
+  border-color: var(--danger);
+  background: rgba(255, 93, 122, 0.14);
+}
 .quiz-letter {
   width: 1.7rem;
   height: 1.7rem;

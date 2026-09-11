@@ -15,9 +15,13 @@ services:
         value: "20"
       - key: NODE_ENV
         value: production
-      - key: SUPABASE_URL
+      - key: MONGODB_URI
         sync: false
-      - key: SUPABASE_ANON_KEY
+      - key: JWT_SECRET
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
         sync: false
       - key: GROQ_API_KEY
         sync: false
@@ -40,10 +44,6 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "20"
-      - key: VITE_SUPABASE_URL
-        sync: false
-      - key: VITE_SUPABASE_ANON_KEY
-        sync: false
       - key: VITE_API_URL
         sync: false
       - key: VITE_SITE_URL

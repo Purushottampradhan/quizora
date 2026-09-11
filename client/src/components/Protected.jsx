@@ -3,8 +3,8 @@ import { useAuth } from '../lib/AuthContext.jsx';
 import Spinner from './Spinner.jsx';
 
 export default function Protected() {
-  const { ready, session, configured } = useAuth();
+  const { ready, session } = useAuth();
   if (!ready) return <Spinner label="Checking session" />;
-  if (!configured || !session) return <Navigate to="/admin/login" replace />;
+  if (!session) return <Navigate to="/admin/login" replace />;
   return <Outlet />;
 }

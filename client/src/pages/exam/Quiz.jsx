@@ -31,6 +31,7 @@ export default function Quiz() {
   const [elapsed, setElapsed] = useState(0);
   const [qClock, setQClock] = useState(0);
   const [confirm, setConfirm] = useState(false);
+  const [reveal, setReveal] = useState(null);
   const enteredAt = useRef(Date.now());
   const currentId = useRef(null);
   const submittedRef = useRef(false);
@@ -79,6 +80,7 @@ export default function Quiz() {
   const questions = payload?.questions || [];
   const exam = payload?.attempt?.exam;
   const question = questions[index];
+  const isPractice = (payload?.attempt?.mode || exam?.mode) === 'practice';
   const limitMs = exam?.duration_minutes ? exam.duration_minutes * 60 * 1000 : null;
   const remaining = limitMs ? Math.max(0, limitMs - elapsed) : null;
 
@@ -144,19 +146,30 @@ export default function Quiz() {
     currentId.current = questions[nextIndex]?.id || null;
     enteredAt.current = Date.now();
     setQClock(0);
+    setReveal(null);
   }
 
   async function pick(letter) {
     if (!question) return;
+    if (isPractice && (reveal || answers[question.id])) return;
     const time_spent_ms = flushDelta();
     const nextAnswers = { ...answers, [question.id]: letter };
     setAnswers(nextAnswers);
     setSkipped((prev) => prev.filter((id) => id !== question.id));
     try {
-      await api(`/api/public/attempts/${attemptId}/answer`, {
+      const res = await api(`/api/public/attempts/${attemptId}/answer`, {
         method: 'POST',
         body: { question_id: question.id, selected_option: letter, time_spent_ms },
       });
+      if (res.mode === 'practice') {
+        setReveal({
+          picked: letter,
+          correct_option: res.correct_option,
+          explanation: res.explanation,
+          is_correct: res.is_correct,
+        });
+        return;
+      }
     } catch (err) {
       setError(err.message);
       return;
@@ -169,14 +182,27 @@ export default function Quiz() {
         currentId.current = questions[next]?.id || null;
         enteredAt.current = Date.now();
         setQClock(0);
+        setReveal(null);
       } else {
         enteredAt.current = Date.now();
       }
     }, 380);
   }
 
+  function nextAfterPractice() {
+    const next = nextOpenIndex(index, answers, skipped.filter((id) => id !== question.id));
+    setReveal(null);
+    if (next !== index) {
+      persistTime(question.id, flushDelta());
+      setIndex(next);
+      currentId.current = questions[next]?.id || null;
+      enteredAt.current = Date.now();
+      setQClock(0);
+    }
+  }
+
   function skipQuestion() {
-    if (!question || answers[question.id]) return;
+    if (!question || answers[question.id] || reveal) return;
     persistTime(question.id, flushDelta());
     const nextSkipped = skipped.includes(question.id) ? skipped : [...skipped, question.id];
     setSkipped(nextSkipped);
@@ -185,6 +211,7 @@ export default function Quiz() {
     currentId.current = questions[next]?.id || null;
     enteredAt.current = Date.now();
     setQClock(0);
+    setReveal(null);
   }
 
   async function submit() {
@@ -212,6 +239,7 @@ export default function Quiz() {
   const done = useMemo(() => questions.filter((q) => answers[q.id]).length, [questions, answers]);
   const skipCount = skipped.filter((id) => !answers[id]).length;
   const left = questions.length - done;
+  const practiceNext = question ? nextOpenIndex(index, answers, skipped.filter((id) => id !== question.id)) : index;
 
   if (error && !payload) {
     return <p className="p-6 text-[var(--danger)]">{error}</p>;
@@ -225,6 +253,7 @@ export default function Quiz() {
           <div className="min-w-0">
             <p className="font-display truncate text-[0.95rem] font-bold leading-tight">{exam.title}</p>
             <p className="text-[11px] text-[var(--muted)]">
+              {isPractice ? 'Practice · ' : 'Exam · '}
               {done}/{questions.length} done · {skipCount} skip · {left} left
             </p>
           </div>
@@ -271,17 +300,31 @@ export default function Quiz() {
         </p>
         <h1 className="quiz-stem">{question.question_text}</h1>
         <div className="mt-2 grid min-h-0 flex-1 content-start gap-1.5 overflow-y-auto pb-1">
-          {LETTERS.map((letter) => (
-            <button
-              key={letter}
-              className={`quiz-option ${answers[question.id] === letter ? 'selected' : ''}`}
-              onClick={() => pick(letter)}
-            >
-              <span className="quiz-letter">{letter}</span>
-              <span>{question[`option_${letter.toLowerCase()}`]}</span>
-            </button>
-          ))}
+          {LETTERS.map((letter) => {
+            let cls = `quiz-option ${answers[question.id] === letter ? 'selected' : ''}`;
+            if (reveal) {
+              if (letter === reveal.correct_option) cls += ' correct';
+              else if (letter === reveal.picked && !reveal.is_correct) cls += ' wrong';
+            }
+            return (
+              <button
+                key={letter}
+                className={cls}
+                onClick={() => pick(letter)}
+                disabled={Boolean(reveal) || (isPractice && Boolean(answers[question.id]) && !reveal)}
+              >
+                <span className="quiz-letter">{letter}</span>
+                <span>{question[`option_${letter.toLowerCase()}`]}</span>
+              </button>
+            );
+          })}
         </div>
+        {reveal && (
+          <p className="mt-2 rounded-xl bg-black/25 p-2 text-xs leading-relaxed">
+            {reveal.is_correct ? 'Correct. ' : `Wrong. Correct is ${reveal.correct_option}. `}
+            {reveal.explanation}
+          </p>
+        )}
         {error && <p className="mt-1 text-xs text-[var(--danger)]">{error}</p>}
       </section>
 
@@ -293,17 +336,23 @@ export default function Quiz() {
           <button
             className="btn btn-ghost flex-1"
             onClick={skipQuestion}
-            disabled={Boolean(answers[question.id])}
+            disabled={Boolean(answers[question.id]) || Boolean(reveal)}
           >
             Skip
           </button>
-          <button
-            className="btn btn-primary flex-[1.3]"
-            onClick={() => (left > 0 ? setConfirm(true) : submit())}
-            disabled={submitting}
-          >
-            {submitting ? '…' : 'Submit'}
-          </button>
+          {isPractice && reveal && practiceNext !== index ? (
+            <button className="btn btn-primary flex-[1.3]" onClick={nextAfterPractice}>
+              Next
+            </button>
+          ) : (
+            <button
+              className="btn btn-primary flex-[1.3]"
+              onClick={() => (left > 0 && !reveal ? setConfirm(true) : submit())}
+              disabled={submitting}
+            >
+              {submitting ? '…' : 'Submit'}
+            </button>
+          )}
         </div>
       </div>
 

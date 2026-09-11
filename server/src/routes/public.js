@@ -1,25 +1,22 @@
 import { Router } from 'express';
-import { supabaseAnon } from '../supabase.js';
+import {
+  getAttempt,
+  getExamBySlug,
+  getResult,
+  heartbeat,
+  saveAi,
+  saveAnswer,
+  startExam,
+  submitExam,
+} from '../services/quizService.js';
 import { generateSuggestions } from '../services/aiCoach.js';
 
 const router = Router();
 
-async function rpc(name, args) {
-  const { data, error } = await supabaseAnon().rpc(name, args);
-  if (error) {
-    const err = new Error(error.message);
-    err.status = 500;
-    throw err;
-  }
-  if (data && data.error) {
-    const err = new Error(data.error);
-    err.status = 400;
-    throw err;
-  }
-  return data;
-}
-
 function handle(err, res) {
+  if (err?.name === 'CastError') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   res.status(err.status || 500).json({ error: err.message || 'Request failed' });
 }
 
@@ -41,16 +38,14 @@ function answersFromDetails(details) {
 async function saveAiTips(attemptId, payload) {
   const suggestions = await generateSuggestions(payload);
   if (suggestions.length) {
-    await rpc('quiz_save_ai', { p_attempt_id: attemptId, p_suggestions: suggestions });
+    await saveAi(attemptId, suggestions);
   }
   return suggestions;
 }
 
 router.get('/exams/:slug', async (req, res) => {
   try {
-    const data = await rpc('quiz_get_exam', { p_slug: req.params.slug });
-    if (data?.error) return res.status(404).json({ error: data.error });
-    res.json(data);
+    res.json(await getExamBySlug(req.params.slug));
   } catch (err) {
     handle(err, res);
   }
@@ -58,11 +53,7 @@ router.get('/exams/:slug', async (req, res) => {
 
 router.post('/exams/:slug/start', async (req, res) => {
   try {
-    const data = await rpc('quiz_start_exam', {
-      p_slug: req.params.slug,
-      p_name: String(req.body?.name || ''),
-    });
-    if (data?.error) return res.status(400).json({ error: data.error });
+    const data = await startExam(req.params.slug, req.body?.name);
     res.status(201).json(data);
   } catch (err) {
     handle(err, res);
@@ -71,9 +62,7 @@ router.post('/exams/:slug/start', async (req, res) => {
 
 router.get('/attempts/:id', async (req, res) => {
   try {
-    const data = await rpc('quiz_get_attempt', { p_id: req.params.id });
-    if (data?.error) return res.status(404).json({ error: data.error });
-    res.json(data);
+    res.json(await getAttempt(req.params.id));
   } catch (err) {
     handle(err, res);
   }
@@ -81,14 +70,14 @@ router.get('/attempts/:id', async (req, res) => {
 
 router.post('/attempts/:id/answer', async (req, res) => {
   try {
-    const data = await rpc('quiz_save_answer', {
-      p_attempt_id: req.params.id,
-      p_question_id: req.body?.question_id,
-      p_selected: req.body?.selected_option,
-      p_time_ms: Number(req.body?.time_spent_ms) || 0,
-    });
-    if (data?.error) return res.status(400).json({ error: data.error });
-    res.json(data);
+    res.json(
+      await saveAnswer(
+        req.params.id,
+        req.body?.question_id,
+        req.body?.selected_option,
+        Number(req.body?.time_spent_ms) || 0
+      )
+    );
   } catch (err) {
     handle(err, res);
   }
@@ -96,12 +85,9 @@ router.post('/attempts/:id/answer', async (req, res) => {
 
 router.post('/attempts/:id/heartbeat', async (req, res) => {
   try {
-    const data = await rpc('quiz_heartbeat', {
-      p_attempt_id: req.params.id,
-      p_question_id: req.body?.question_id,
-      p_time_ms: Number(req.body?.time_spent_ms) || 0,
-    });
-    res.json(data || { ok: true });
+    res.json(
+      await heartbeat(req.params.id, req.body?.question_id, Number(req.body?.time_spent_ms) || 0)
+    );
   } catch (err) {
     handle(err, res);
   }
@@ -109,13 +95,14 @@ router.post('/attempts/:id/heartbeat', async (req, res) => {
 
 router.post('/attempts/:id/submit', async (req, res) => {
   try {
-    const data = await rpc('quiz_submit_exam', {
-      p_attempt_id: req.params.id,
-      p_timings: req.body?.timings || {},
-    });
-    if (data?.error) return res.status(400).json({ error: data.error });
+    const data = await submitExam(req.params.id, req.body?.timings || {});
     if (data.already) {
-      return res.json({ attempt_id: data.attempt_id, score: data.score, total: data.total, already: true });
+      return res.json({
+        attempt_id: data.attempt_id,
+        score: data.score,
+        total: data.total,
+        already: true,
+      });
     }
 
     let ai_suggestions = [];
@@ -143,9 +130,7 @@ router.post('/attempts/:id/submit', async (req, res) => {
 
 router.post('/attempts/:id/coach', async (req, res) => {
   try {
-    const data = await rpc('quiz_get_result', { p_id: req.params.id });
-    if (data?.error) return res.status(404).json({ error: data.error });
-
+    const data = await getResult(req.params.id);
     const existing = Array.isArray(data.attempt?.ai_suggestions)
       ? data.attempt.ai_suggestions.map(String).filter(Boolean)
       : [];
@@ -168,9 +153,7 @@ router.post('/attempts/:id/coach', async (req, res) => {
 
 router.get('/attempts/:id/result', async (req, res) => {
   try {
-    const data = await rpc('quiz_get_result', { p_id: req.params.id });
-    if (data?.error) return res.status(404).json({ error: data.error });
-    res.json(data);
+    res.json(await getResult(req.params.id));
   } catch (err) {
     handle(err, res);
   }

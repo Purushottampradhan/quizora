@@ -4,7 +4,7 @@ import Logo from '../../components/Logo.jsx';
 import { useAuth } from '../../lib/AuthContext.jsx';
 
 export default function Login() {
-  const { session, signIn, configured } = useAuth();
+  const { session, signIn } = useAuth();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -35,13 +35,7 @@ export default function Login() {
       <div className="glass rounded-3xl p-6">
         <h1 className="font-display text-2xl font-bold">Admin sign in</h1>
         <p className="mt-1 text-[var(--muted)]">Create exams, upload questions, and watch attempts.</p>
-        <p className="mt-3 text-sm text-[var(--muted)]">New accounts are disabled. Use an existing admin login.</p>
-
-        {!configured && (
-          <p className="mt-4 rounded-2xl bg-amber-400/15 px-3 py-2 text-sm text-amber-200">
-            Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in quizora/.env
-          </p>
-        )}
+        <p className="mt-3 text-sm text-[var(--muted)]">New accounts are disabled. Use your existing admin login.</p>
 
         <form className="mt-5 grid gap-3" onSubmit={onSubmit}>
           <label className="grid gap-1 text-sm font-bold">

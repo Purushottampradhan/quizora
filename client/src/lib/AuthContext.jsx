@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../lib/supabase.js';
+import { api } from './api.js';
 
+const TOKEN_KEY = 'quizora_token';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -9,18 +10,20 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!supabase) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) {
       setReady(true);
       return;
     }
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session || null);
-      setReady(true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, next) => {
-      setSession(next);
-    });
-    return () => sub.subscription.unsubscribe();
+    api('/api/admin/me', { token })
+      .then((data) => {
+        setSession({ access_token: token, user: data.user });
+      })
+      .catch(() => {
+        localStorage.removeItem(TOKEN_KEY);
+        setSession(null);
+      })
+      .finally(() => setReady(true));
   }, []);
 
   const value = useMemo(
@@ -29,19 +32,20 @@ export function AuthProvider({ children }) {
       session,
       user: session?.user || null,
       token: session?.access_token || '',
-      configured: Boolean(supabase),
+      configured: true,
       error,
       async signIn(email, password) {
         setError('');
-        if (!supabase) throw new Error('Add VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in quizora/.env');
-        const { error: err } = await supabase.auth.signInWithPassword({ email, password });
-        if (err) {
-          setError(err.message);
-          throw err;
-        }
+        const data = await api('/api/admin/login', {
+          method: 'POST',
+          body: { email, password },
+        });
+        localStorage.setItem(TOKEN_KEY, data.token);
+        setSession({ access_token: data.token, user: data.user });
       },
       async signOut() {
-        await supabase?.auth.signOut();
+        localStorage.removeItem(TOKEN_KEY);
+        setSession(null);
       },
     }),
     [ready, session, error]

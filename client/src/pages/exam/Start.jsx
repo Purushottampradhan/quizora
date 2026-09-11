@@ -47,8 +47,13 @@ export default function Start() {
       <Logo />
       {exam ? (
         <div className="glass mt-10 rounded-3xl p-6">
-          <p className="text-xs font-extrabold tracking-wide text-[var(--coral-2)]">YOU'RE IN</p>
+          <p className="text-xs font-extrabold tracking-wide text-[var(--coral-2)]">
+            {exam.mode === 'practice' ? 'PRACTICE' : 'EXAM'}
+          </p>
           <h1 className="font-display mt-2 text-3xl font-extrabold">{exam.title}</h1>
+          {exam.paper_title && exam.paper_title !== exam.title && (
+            <p className="mt-1 font-bold text-[var(--gold)]">{exam.paper_title}</p>
+          )}
           <p className="mt-2 text-[var(--muted)]">{exam.description}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
             <span className="rounded-full bg-white/10 px-3 py-1">{exam.question_count} questions</span>
@@ -57,6 +62,12 @@ export default function Start() {
             ) : (
               <span className="rounded-full bg-white/10 px-3 py-1">No time limit</span>
             )}
+            <span className="rounded-full bg-white/10 px-3 py-1">
+              +{exam.plus_mark ?? 1}
+              {Number(exam.minus_mark) > 0 ? ` / −${exam.minus_mark} wrong` : ' · no negative'}
+            </span>
+            {exam.shuffle_questions && <span className="rounded-full bg-white/10 px-3 py-1">Shuffled questions</span>}
+            {exam.shuffle_options && <span className="rounded-full bg-white/10 px-3 py-1">Shuffled options</span>}
           </div>
           <form className="mt-6 grid gap-3" onSubmit={start}>
             <label className="grid gap-1 text-sm font-bold">
@@ -79,7 +90,11 @@ export default function Start() {
           <ul className="mt-5 grid gap-1 text-sm text-[var(--muted)]">
             <li>Tap an option — next question opens on its own.</li>
             <li>Jump to any number in the bar if you want to skip or change.</li>
-            <li>Submit when you are done to see score, explanations, and AI tips.</li>
+            <li>
+              {exam.mode === 'practice'
+                ? 'Practice: after you tap, you see the correct answer and explanation, then Next.'
+                : 'Exam: answers stay hidden until you submit. Then you get score, explanations, and AI tips.'}
+            </li>
           </ul>
         </div>
       ) : (

@@ -1,9 +1,10 @@
 import './loadEnv.js';
 import express from 'express';
 import cors from 'cors';
+import { connectDb } from './db.js';
+import { seedAdmin } from './seedAdmin.js';
 import adminRoutes from './routes/admin.js';
 import publicRoutes from './routes/public.js';
-import { supabaseConfig } from './supabase.js';
 
 const app = express();
 const port = Number(process.env.PORT) || 5050;
@@ -52,12 +53,15 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/public', publicRoutes);
 
 app.use((err, _req, res, _next) => {
+  if (err?.name === 'CastError') {
+    return res.status(404).json({ error: 'Not found' });
+  }
   console.error(err);
   res.status(500).json({ error: err.message || 'Server error' });
 });
 
+await connectDb();
+await seedAdmin();
 app.listen(port, '0.0.0.0', () => {
-  const { url } = supabaseConfig();
   console.log(`Quizora API on port ${port}`);
-  console.log(url ? `Supabase: ${url}` : 'Supabase keys missing');
 });

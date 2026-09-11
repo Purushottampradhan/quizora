@@ -1,4 +1,19 @@
-import { supabaseAnon, supabaseAsUser } from '../supabase.js';
+import jwt from 'jsonwebtoken';
+import { User } from '../models/User.js';
+
+function jwtSecret() {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is missing in quizora/.env');
+  return secret;
+}
+
+export function signToken(user) {
+  return jwt.sign(
+    { id: String(user._id), email: user.email },
+    jwtSecret(),
+    { expiresIn: '7d' }
+  );
+}
 
 export async function requireAdmin(req, res, next) {
   const header = req.headers.authorization || '';
@@ -8,14 +23,14 @@ export async function requireAdmin(req, res, next) {
   }
 
   try {
-    const { data, error } = await supabaseAnon().auth.getUser(token);
-    if (error || !data?.user) {
+    const payload = jwt.verify(token, jwtSecret());
+    const user = await User.findById(payload.id);
+    if (!user) {
       return res.status(401).json({ error: 'Invalid or expired session' });
     }
-    req.user = data.user;
-    req.sb = supabaseAsUser(token);
+    req.user = { id: String(user._id), email: user.email };
     next();
-  } catch (err) {
-    return res.status(500).json({ error: err.message || 'Auth failed' });
+  } catch {
+    return res.status(401).json({ error: 'Invalid or expired session' });
   }
 }
