@@ -7,6 +7,7 @@ import Login from './pages/admin/Login.jsx';
 import Dashboard from './pages/admin/Dashboard.jsx';
 import ExamDetail from './pages/admin/ExamDetail.jsx';
 import Start from './pages/exam/Start.jsx';
+import Read from './pages/exam/Read.jsx';
 import Quiz from './pages/exam/Quiz.jsx';
 import Result from './pages/exam/Result.jsx';
 
@@ -25,6 +26,7 @@ export default function App() {
             </Route>
           </Route>
           <Route path="/e/:slug" element={<Start />} />
+          <Route path="/e/:slug/read" element={<Read />} />
           <Route path="/e/:slug/quiz/:attemptId" element={<Quiz />} />
           <Route path="/e/:slug/result/:attemptId" element={<Result />} />
           <Route path="*" element={<Navigate to="/" replace />} />

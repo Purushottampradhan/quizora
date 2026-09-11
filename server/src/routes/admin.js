@@ -23,7 +23,7 @@ const upload = multer({
 function paperFields(body) {
   const allowed = {};
   if (typeof body.title === 'string') allowed.title = body.title.trim() || 'Share link';
-  if (body.mode === 'exam' || body.mode === 'practice') allowed.mode = body.mode;
+  if (body.mode === 'exam' || body.mode === 'practice' || body.mode === 'read') allowed.mode = body.mode;
   if (typeof body.shuffle_questions === 'boolean') allowed.shuffleQuestions = body.shuffle_questions;
   if (typeof body.shuffle_options === 'boolean') allowed.shuffleOptions = body.shuffle_options;
   if (body.plus_mark != null) allowed.plusMark = Math.max(0, Number(body.plus_mark) || 1);

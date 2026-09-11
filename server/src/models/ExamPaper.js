@@ -5,7 +5,7 @@ const paperSchema = new mongoose.Schema(
     examId: { type: mongoose.Schema.Types.ObjectId, ref: 'Exam', required: true, index: true },
     slug: { type: String, required: true, unique: true },
     title: { type: String, default: 'Full exam' },
-    mode: { type: String, enum: ['exam', 'practice'], default: 'exam' },
+    mode: { type: String, enum: ['exam', 'practice', 'read'], default: 'exam' },
     shuffleQuestions: { type: Boolean, default: false },
     shuffleOptions: { type: Boolean, default: false },
     plusMark: { type: Number, default: 1 },

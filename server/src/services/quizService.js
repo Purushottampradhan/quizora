@@ -87,12 +87,42 @@ export async function getExamBySlug(slug) {
 
   if (paper) {
     const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
-    const ids = pickQuestionIds(paper, bank);
+    const ids = pickQuestionIds({ ...paper.toObject(), shuffleQuestions: paper.mode === 'read' ? false : paper.shuffleQuestions }, bank);
     return { exam: publicExam(exam, paper, ids.length) };
   }
 
   const count = await Question.countDocuments({ examId: exam._id });
   return { exam: publicExam(exam, null, count) };
+}
+
+const NOTES_MAX = 50;
+
+export async function getReadNotes(slug, offset = 0, limit = 20) {
+  const { paper, exam } = await resolvePaperAndExam(slug);
+  if (!exam) fail('This exam is not available', 404);
+  if ((paper?.mode || 'exam') !== 'read') {
+    fail('This link is a quiz, not a reading set', 400);
+  }
+
+  const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
+  const ids = pickQuestionIds({ ...paper.toObject(), shuffleQuestions: false }, bank);
+  const start = Math.max(0, Number(offset) || 0);
+  const take = Math.min(NOTES_MAX, Math.max(1, Number(limit) || 10));
+  const slice = ids.slice(start, start + take);
+  const questions = await questionsByIds(slice);
+
+  return {
+    exam: publicExam(exam, paper, ids.length),
+    items: questions.map((q, i) => ({
+      number: start + i + 1,
+      question_text: q.questionText,
+      answer: optionText(q, q.correctAnswer),
+      explanation: q.explanation || '',
+    })),
+    offset: start,
+    total: ids.length,
+    has_more: start + slice.length < ids.length,
+  };
 }
 
 export async function startExam(slug, name) {
@@ -101,6 +131,7 @@ export async function startExam(slug, name) {
 
   const { paper, exam } = await resolvePaperAndExam(slug);
   if (!exam) fail('This exam is not available', 404);
+  if ((paper?.mode || 'exam') === 'read') fail('This is a reading set, not a quiz');
 
   const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
   const ids = paper ? pickQuestionIds(paper, bank) : bank.map((q) => sid(q._id));

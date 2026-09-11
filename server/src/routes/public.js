@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   getAttempt,
   getExamBySlug,
+  getReadNotes,
   getResult,
   heartbeat,
   saveAi,
@@ -46,6 +47,16 @@ async function saveAiTips(attemptId, payload) {
 router.get('/exams/:slug', async (req, res) => {
   try {
     res.json(await getExamBySlug(req.params.slug));
+  } catch (err) {
+    handle(err, res);
+  }
+});
+
+router.get('/exams/:slug/notes', async (req, res) => {
+  try {
+    res.json(
+      await getReadNotes(req.params.slug, Number(req.query.offset) || 0, Number(req.query.limit) || 10)
+    );
   } catch (err) {
     handle(err, res);
   }

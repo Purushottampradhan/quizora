@@ -87,6 +87,7 @@ JSON is an array of those objects. Excel uses the first sheet. A template downlo
 | Admin | `/admin/login` | Sign in (signups disabled) |
 | Admin | `/admin` | Exams + create + copy link |
 | Admin | `/admin/exams/:id` | Questions, attempts, share, settings |
-| Student | `/e/:slug` | Name + start |
+| Student | `/e/:slug` | Name + start (quiz) |
+| Student | `/e/:slug/read` | Read mode: question, answer, explanation |
 | Student | `/e/:slug/quiz/:attemptId` | Take exam |
 | Student | `/e/:slug/result/:attemptId` | Review + AI tips |

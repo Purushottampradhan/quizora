@@ -98,8 +98,8 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
   return (
     <div className="mt-5">
       <p className="text-sm text-[var(--muted)]">
-        Each link can be practice or exam, shuffle questions/options, use negative marks, and send only part of the bank
-        (1–20, 21–40, first N, or hand-picked).
+        Each link can be a quiz, practice, or <strong>read mode</strong> (question + answer + explanation on one
+        page, no options). You can still send only part of the bank (1–20, 21–40, first N, or hand-picked).
       </p>
       {error && <p className="mt-2 text-sm text-[var(--danger)]">{error}</p>}
 
@@ -110,10 +110,10 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
               <div>
                 <p className="font-display font-bold">{p.title}</p>
                 <p className="mt-1 text-xs text-[var(--muted)]">
-                  {p.mode === 'practice' ? 'Practice' : 'Exam'} · {p.question_count} Q · +{p.plus_mark}
-                  {Number(p.minus_mark) > 0 ? ` / −${p.minus_mark}` : ' / no negative'}
-                  {p.shuffle_questions ? ' · shuffle Q' : ''}
-                  {p.shuffle_options ? ' · shuffle options' : ''}
+                  {p.mode === 'read' ? 'Read' : p.mode === 'practice' ? 'Practice' : 'Exam'} · {p.question_count} Q
+                  {p.mode !== 'read' ? ` · +${p.plus_mark}${Number(p.minus_mark) > 0 ? ` / −${p.minus_mark}` : ' / no negative'}` : ''}
+                  {p.mode !== 'read' && p.shuffle_questions ? ' · shuffle Q' : ''}
+                  {p.mode !== 'read' && p.shuffle_options ? ' · shuffle options' : ''}
                   {p.selection_type === 'range' ? ` · Q ${p.range_start}–${p.range_end}` : ''}
                   {p.selection_type === 'count' ? ` · first/random ${p.pick_count}` : ''}
                   {p.selection_type === 'manual' ? ' · selected questions' : ''}
@@ -153,7 +153,7 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
             <input
               className="field"
               required
-              placeholder="Practice 1–20"
+                  placeholder="Practice 1–20 or Anatomy notes"
               value={form.title}
               onChange={(e) => setForm({ ...form, title: e.target.value })}
             />
@@ -164,6 +164,7 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
               <select className="field" value={form.mode} onChange={(e) => setForm({ ...form, mode: e.target.value })}>
                 <option value="exam">Exam (answers after submit)</option>
                 <option value="practice">Practice (show correct after each tap)</option>
+                <option value="read">Read (question, answer, explanation — no quiz)</option>
               </select>
             </label>
             <label className="grid gap-1 text-sm font-bold">
@@ -253,6 +254,7 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
             </div>
           )}
 
+          {form.mode !== 'read' && (
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="grid gap-1 text-sm font-bold">
               Marks for correct
@@ -277,6 +279,9 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
               />
             </label>
           </div>
+          )}
+          {form.mode !== 'read' && (
+          <>
           <label className="flex items-center gap-2 text-sm font-bold">
             <input
               type="checkbox"
@@ -293,6 +298,8 @@ export default function ShareLinks({ examId, token, questions, papers, onChanged
             />
             Shuffle A–D options
           </label>
+          </>
+          )}
           <button className="btn btn-primary w-fit" disabled={busy}>
             {busy ? 'Creating…' : 'Create link'}
           </button>

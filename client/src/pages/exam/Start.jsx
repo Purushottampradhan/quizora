@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Navigate, useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../lib/api.js';
 import Logo from '../../components/Logo.jsx';
 import Spinner from '../../components/Spinner.jsx';
@@ -41,6 +41,7 @@ export default function Start() {
   }
 
   if (loading) return <Spinner label="Opening exam" />;
+  if (exam?.mode === 'read') return <Navigate to={`/e/${slug}/read`} replace />;
 
   return (
     <div className="mx-auto flex min-h-screen max-w-lg flex-col px-4 py-8">
