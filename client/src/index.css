@@ -271,6 +271,87 @@ select.field option {
   color: #120c2a;
 }
 
+.chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.chip-gold { background: rgba(255, 209, 102, 0.18); color: var(--gold); }
+.chip-coral { background: rgba(255, 122, 89, 0.18); color: var(--coral-2); }
+.chip-violet { background: rgba(139, 124, 255, 0.18); color: #c8c0ff; }
+.chip-mint { background: rgba(62, 224, 176, 0.16); color: var(--mint); }
+.chip-muted { background: rgba(255,255,255,0.08); color: var(--muted); }
+.chip-danger { background: rgba(255, 93, 122, 0.16); color: var(--danger); }
+
+.stat-tile {
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.22);
+  padding: 0.75rem 0.85rem;
+}
+
+.admin-table {
+  width: 100%;
+  min-width: 32rem;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.875rem;
+}
+.admin-table th {
+  padding: 0.55rem 0.65rem;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.admin-table td {
+  padding: 0.7rem 0.65rem;
+  border-top: 1px solid var(--line);
+  vertical-align: middle;
+}
+.admin-table tbody tr:hover td {
+  background: rgba(255,255,255,0.03);
+}
+
+.link-attempts {
+  max-height: 16rem;
+  overflow: auto;
+  margin-top: 0.75rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.18);
+  scrollbar-gutter: stable;
+}
+.link-attempts::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+.link-attempts::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.28);
+  border-radius: 99px;
+}
+.link-attempts .admin-table {
+  min-width: 28rem;
+}
+.link-attempts .admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1a1240;
+}
+
+.read-answer {
+  margin-top: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid rgba(62, 224, 176, 0.28);
+  background: rgba(62, 224, 176, 0.1);
+  padding: 0.85rem 1rem;
+}
 .sr-only {
   position: absolute;
   width: 1px;

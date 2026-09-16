@@ -1,4 +1,4 @@
-# Quizora
+# Quiz97
 
 Mobile-friendly MCQ exam platform: React + Express + MongoDB Atlas, with Groq AI study tips after each attempt.
 
@@ -30,11 +30,11 @@ The first API start creates collections automatically. If `ADMIN_EMAIL` and `ADM
 
 ### 2. Groq (AI tips)
 
-Create an API key at [console.groq.com/keys](https://console.groq.com/keys). After submit, Groq writes 2–3 tips from the student's answers. Quizora uses `openai/gpt-oss-20b` by default (`GROQ_MODEL` in `.env`). Older Llama 3.1 / 3.3 IDs are retired on Groq.
+Create an API key at [console.groq.com/keys](https://console.groq.com/keys). After submit, Groq writes 2–3 tips from the student's answers. Quiz97 uses `openai/gpt-oss-20b` by default (`GROQ_MODEL` in `.env`). Older Llama 3.1 / 3.3 IDs are retired on Groq.
 
 ### 3. Environment
 
-Copy `.env.example` to `.env` in this folder (`quizora/.env`). The Vite `VITE_*` keys are enough for the client — the API reads the same file.
+Copy `.env.example` to `.env` in this folder. The Vite `VITE_*` keys are enough for the client — the API reads the same file.
 
 ```
 VITE_SITE_URL=http://localhost:5173
@@ -52,7 +52,6 @@ GROQ_MODEL=openai/gpt-oss-20b
 ### 4. Run
 
 ```bash
-cd quizora
 npm install
 npm run install:all
 npm run dev

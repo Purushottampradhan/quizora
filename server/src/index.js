@@ -7,6 +7,7 @@ import adminRoutes from './routes/admin.js';
 import publicRoutes from './routes/public.js';
 
 const app = express();
+app.set('trust proxy', 1);
 const port = Number(process.env.PORT) || 5050;
 
 function corsOrigins() {
@@ -37,7 +38,7 @@ app.use(
 app.use(express.json({ limit: '2mb' }));
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, name: 'quizora' });
+  res.json({ ok: true, name: 'quiz97' });
 });
 
 function rejectSignup(_req, res) {
@@ -63,5 +64,5 @@ app.use((err, _req, res, _next) => {
 await connectDb();
 await seedAdmin();
 app.listen(port, '0.0.0.0', () => {
-  console.log(`Quizora API on port ${port}`);
+  console.log(`Quiz97 API on port ${port}`);
 });

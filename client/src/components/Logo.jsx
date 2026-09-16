@@ -13,7 +13,7 @@ export default function Logo({ size = 36 }) {
           strokeLinejoin="round"
         />
       </svg>
-      <span className="font-display text-xl font-extrabold tracking-tight">Quizora</span>
+      <span className="font-display text-xl font-extrabold tracking-tight">Quiz97</span>
     </div>
   );
 }

@@ -4,6 +4,8 @@ import {
   getExamBySlug,
   getReadNotes,
   getResult,
+  getShareMeta,
+  getCoverImage,
   heartbeat,
   saveAi,
   saveAnswer,
@@ -11,6 +13,8 @@ import {
   submitExam,
 } from '../services/quizService.js';
 import { generateSuggestions } from '../services/aiCoach.js';
+import { clientIp } from '../lib/identity.js';
+import { renderShareCard } from '../services/ogImage.js';
 
 const router = Router();
 
@@ -44,9 +48,40 @@ async function saveAiTips(attemptId, payload) {
   return suggestions;
 }
 
+router.get('/exams/:slug/cover', async (req, res) => {
+  try {
+    const image = await getCoverImage(req.params.slug);
+    res.setHeader('Content-Type', image.type);
+    res.setHeader('Cache-Control', 'public, max-age=120');
+    res.send(image.buffer);
+  } catch (err) {
+    handle(err, res);
+  }
+});
+
+router.get('/exams/:slug/share', async (req, res) => {
+  try {
+    res.json(await getShareMeta(req.params.slug));
+  } catch (err) {
+    handle(err, res);
+  }
+});
+
+router.get('/exams/:slug/og.png', async (req, res) => {
+  try {
+    const meta = await getShareMeta(req.params.slug);
+    const png = renderShareCard(meta);
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, max-age=300');
+    res.send(png);
+  } catch (err) {
+    handle(err, res);
+  }
+});
+
 router.get('/exams/:slug', async (req, res) => {
   try {
-    res.json(await getExamBySlug(req.params.slug));
+    res.json(await getExamBySlug(req.params.slug, clientIp(req)));
   } catch (err) {
     handle(err, res);
   }
@@ -64,7 +99,7 @@ router.get('/exams/:slug/notes', async (req, res) => {
 
 router.post('/exams/:slug/start', async (req, res) => {
   try {
-    const data = await startExam(req.params.slug, req.body?.name);
+    const data = await startExam(req.params.slug, req.body?.name, clientIp(req));
     res.status(201).json(data);
   } catch (err) {
     handle(err, res);
@@ -126,7 +161,7 @@ router.post('/attempts/:id/submit', async (req, res) => {
         answers: data.review || [],
       });
     } catch (err) {
-      console.error('[quizora] AI save after submit failed:', err.message);
+      console.error('[quiz97] AI save after submit failed:', err.message);
     }
     res.json({
       attempt_id: data.attempt_id,

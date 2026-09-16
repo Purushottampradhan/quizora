@@ -84,6 +84,24 @@ export function paperQuestionCount(paper, questions) {
   return n;
 }
 
+export const PRESET_GROUPS = ['RRB', 'TET', 'UPSC', 'Other'];
+
+export function normalizeGroup(value, title = '') {
+  const raw = String(value || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 40);
+  if (raw) {
+    const known = PRESET_GROUPS.find((g) => g.toLowerCase() === raw.toLowerCase());
+    return known || raw;
+  }
+  const t = String(title || '').toLowerCase();
+  if (/\brrb\b/.test(t)) return 'RRB';
+  if (/\btet\b/.test(t)) return 'TET';
+  if (/\bupsc\b/.test(t)) return 'UPSC';
+  return 'Other';
+}
+
 export function examJson(exam) {
   return {
     id: sid(exam._id),
@@ -92,6 +110,8 @@ export function examJson(exam) {
     slug: exam.slug,
     duration_minutes: exam.durationMinutes,
     is_active: exam.isActive,
+    group: exam.group ? normalizeGroup(exam.group) : normalizeGroup('', exam.title),
+    cover_url: exam.coverImageType ? `/api/public/exams/${exam.slug}/cover` : '',
     created_by: sid(exam.createdBy),
     created_at: exam.createdAt,
     updated_at: exam.updatedAt,
@@ -114,7 +134,21 @@ export function questionJson(q) {
   };
 }
 
-export function paperJson(p, questions = []) {
+export function toPlain(doc) {
+  return doc && typeof doc.toObject === 'function' ? doc.toObject() : doc || {};
+}
+
+export function effectiveDurationMinutes(paper, exam) {
+  if (paper) {
+    const obj = toPlain(paper);
+    if (Object.prototype.hasOwnProperty.call(obj, 'durationMinutes') && obj.durationMinutes !== undefined) {
+      return obj.durationMinutes ?? null;
+    }
+  }
+  return exam?.durationMinutes ?? null;
+}
+
+export function paperJson(p, questions = [], exam = null) {
   return {
     id: sid(p._id),
     exam_id: sid(p.examId),
@@ -123,6 +157,7 @@ export function paperJson(p, questions = []) {
     mode: p.mode,
     shuffle_questions: p.shuffleQuestions,
     shuffle_options: p.shuffleOptions,
+    duration_minutes: effectiveDurationMinutes(p, exam),
     plus_mark: p.plusMark,
     minus_mark: p.minusMark,
     selection_type: p.selectionType,
@@ -131,6 +166,8 @@ export function paperJson(p, questions = []) {
     pick_count: p.pickCount,
     question_ids: (p.questionIds || []).map(sid),
     is_active: p.isActive,
+    is_default: exam ? p.slug === exam.slug : false,
+    allow_multiple: p.allowMultipleAttempts !== false,
     created_at: p.createdAt,
     question_count: paperQuestionCount(p, questions),
   };
@@ -142,6 +179,8 @@ export function attemptJson(a) {
     exam_id: sid(a.examId),
     paper_id: a.paperId ? sid(a.paperId) : null,
     candidate_name: a.candidateName,
+    client_ip: a.clientIp || '',
+    name_key: a.nameKey || '',
     started_at: a.startedAt,
     submitted_at: a.submittedAt,
     score: a.score,
@@ -153,6 +192,7 @@ export function attemptJson(a) {
     mode: a.mode,
     plus_mark: a.plusMark,
     minus_mark: a.minusMark,
+    duration_minutes: a.durationMinutes,
     correct_count: a.correctCount,
     wrong_count: a.wrongCount,
     skip_count: a.skipCount,

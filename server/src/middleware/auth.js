@@ -3,7 +3,7 @@ import { User } from '../models/User.js';
 
 function jwtSecret() {
   const secret = process.env.JWT_SECRET;
-  if (!secret) throw new Error('JWT_SECRET is missing in quizora/.env');
+  if (!secret) throw new Error('JWT_SECRET is missing in .env');
   return secret;
 }
 

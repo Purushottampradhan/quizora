@@ -8,6 +8,7 @@ const paperSchema = new mongoose.Schema(
     mode: { type: String, enum: ['exam', 'practice', 'read'], default: 'exam' },
     shuffleQuestions: { type: Boolean, default: false },
     shuffleOptions: { type: Boolean, default: false },
+    durationMinutes: { type: Number },
     plusMark: { type: Number, default: 1 },
     minusMark: { type: Number, default: 0 },
     selectionType: { type: String, enum: ['all', 'range', 'count', 'manual'], default: 'all' },
@@ -16,6 +17,7 @@ const paperSchema = new mongoose.Schema(
     pickCount: { type: Number, default: null },
     questionIds: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Question' }],
     isActive: { type: Boolean, default: true },
+    allowMultipleAttempts: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

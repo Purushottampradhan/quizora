@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router-dom';
-import { api } from '../../lib/api.js';
+import { api, mediaUrl } from '../../lib/api.js';
+import { examPageTitle } from '../../lib/examTitle.js';
 import Logo from '../../components/Logo.jsx';
 import Spinner from '../../components/Spinner.jsx';
 
@@ -26,6 +27,15 @@ export default function Start() {
     })();
   }, [slug]);
 
+  useEffect(() => {
+    if (!exam) return;
+    const previous = document.title;
+    document.title = examPageTitle(exam);
+    return () => {
+      document.title = previous;
+    };
+  }, [exam]);
+
   async function start(e) {
     e.preventDefault();
     setBusy(true);
@@ -48,6 +58,13 @@ export default function Start() {
       <Logo />
       {exam ? (
         <div className="glass mt-10 rounded-3xl p-6">
+          {exam.cover_url ? (
+            <img
+              src={mediaUrl(exam.cover_url)}
+              alt=""
+              className="-mx-6 -mt-6 mb-5 max-h-56 w-[calc(100%+3rem)] rounded-t-3xl object-cover"
+            />
+          ) : null}
           <p className="text-xs font-extrabold tracking-wide text-[var(--coral-2)]">
             {exam.mode === 'practice' ? 'PRACTICE' : 'EXAM'}
           </p>
@@ -57,18 +74,19 @@ export default function Start() {
           )}
           <p className="mt-2 text-[var(--muted)]">{exam.description}</p>
           <div className="mt-4 flex flex-wrap gap-2 text-sm">
-            <span className="rounded-full bg-white/10 px-3 py-1">{exam.question_count} questions</span>
+            <span className="chip chip-muted">{exam.question_count} questions</span>
             {exam.duration_minutes ? (
-              <span className="rounded-full bg-white/10 px-3 py-1">{exam.duration_minutes} min limit</span>
+              <span className="chip chip-coral">{exam.duration_minutes} min limit</span>
             ) : (
-              <span className="rounded-full bg-white/10 px-3 py-1">No time limit</span>
+              <span className="chip chip-muted">No time limit</span>
             )}
-            <span className="rounded-full bg-white/10 px-3 py-1">
+            <span className="chip chip-muted">
               +{exam.plus_mark ?? 1}
               {Number(exam.minus_mark) > 0 ? ` / −${exam.minus_mark} wrong` : ' · no negative'}
             </span>
-            {exam.shuffle_questions && <span className="rounded-full bg-white/10 px-3 py-1">Shuffled questions</span>}
-            {exam.shuffle_options && <span className="rounded-full bg-white/10 px-3 py-1">Shuffled options</span>}
+            {exam.shuffle_questions && <span className="chip chip-violet">Shuffled questions</span>}
+            {exam.shuffle_options && <span className="chip chip-violet">Shuffled options</span>}
+            {exam.allow_multiple === false && <span className="chip chip-coral">One attempt only</span>}
           </div>
           <form className="mt-6 grid gap-3" onSubmit={start}>
             <label className="grid gap-1 text-sm font-bold">
@@ -96,6 +114,9 @@ export default function Start() {
                 ? 'Practice: after you tap, you see the correct answer and explanation, then Next.'
                 : 'Exam: answers stay hidden until you submit. Then you get score, explanations, and AI tips.'}
             </li>
+            {exam.allow_multiple === false && (
+              <li>One attempt per IP: this network cannot start again after submit.</li>
+            )}
           </ul>
         </div>
       ) : (

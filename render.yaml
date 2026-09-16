@@ -1,9 +1,9 @@
 # Blueprint: https://dashboard.render.com/blueprints
-# Connect the GitHub repo whose root is this `quizora` folder.
+# Connect the GitHub repo whose root is this project folder.
 
 services:
   - type: web
-    name: quizora-api
+    name: quiz97-api
     runtime: node
     plan: free
     rootDir: server
@@ -31,20 +31,18 @@ services:
         sync: false
 
   - type: web
-    name: quizora-web
-    runtime: static
+    name: quiz97-web
+    runtime: node
     plan: free
     rootDir: client
     buildCommand: npm install && npm run build
-    staticPublishPath: dist
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+    startCommand: npm start
     envVars:
       - key: NODE_VERSION
         value: "20"
       - key: VITE_API_URL
         sync: false
       - key: VITE_SITE_URL
+        sync: false
+      - key: API_URL
         sync: false

@@ -19,3 +19,10 @@ export async function api(path, { token, method = 'GET', body, isForm } = {}) {
 export function examLink(slug) {
   return `${window.location.origin}/e/${slug}`;
 }
+
+export function mediaUrl(path, cacheKey) {
+  if (!path) return '';
+  const url = /^https?:\/\//i.test(path) ? path : `${BASE}${path}`;
+  if (!cacheKey) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}v=${encodeURIComponent(cacheKey)}`;
+}

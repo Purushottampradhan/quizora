@@ -1,16 +1,20 @@
 import { Attempt } from '../models/Attempt.js';
 import { AttemptAnswer } from '../models/AttemptAnswer.js';
 import { Exam } from '../models/Exam.js';
+import { ExamBlock } from '../models/ExamBlock.js';
 import { ExamPaper } from '../models/ExamPaper.js';
 import { Question } from '../models/Question.js';
+import { nameKey, normalizeIp } from '../lib/identity.js';
 import {
   displayLetter,
   identityMap,
   mappedQuestion,
   optionText,
+  paperQuestionCount,
   pickQuestionIds,
   shuffleLetterMap,
   sid,
+  effectiveDurationMinutes,
 } from './quizEngine.js';
 
 function fail(message, status = 400) {
@@ -27,7 +31,7 @@ function publicExam(exam, paper, questionCount) {
     description: exam.description,
     slug: p.slug || exam.slug,
     paper_title: p.title || exam.title,
-    duration_minutes: exam.durationMinutes,
+    duration_minutes: effectiveDurationMinutes(paper, exam),
     is_active: exam.isActive,
     question_count: questionCount,
     mode: p.mode || 'exam',
@@ -36,6 +40,8 @@ function publicExam(exam, paper, questionCount) {
     plus_mark: p.plusMark ?? 1,
     minus_mark: p.minusMark ?? 0,
     selection_type: p.selectionType || 'all',
+    allow_multiple: p.allowMultipleAttempts !== false,
+    cover_url: exam.coverImageType ? `/api/public/exams/${p.slug || exam.slug}/cover` : '',
   };
 }
 
@@ -50,6 +56,15 @@ async function resolvePaperAndExam(slug) {
   const paper = await ExamPaper.findOne({ slug, isActive: true });
   if (paper) {
     const exam = await Exam.findOne({ _id: paper.examId, isActive: true });
+    if (exam && paper.slug === exam.slug && paper.mode !== 'read') {
+      paper.mode = 'read';
+      if (paper.title === 'Full exam') paper.title = 'Read notes';
+      await paper.save();
+    }
+    if (exam && !Object.prototype.hasOwnProperty.call(paper.toObject(), 'durationMinutes')) {
+      paper.durationMinutes = exam.durationMinutes ?? null;
+      await paper.save();
+    }
     return { paper, exam };
   }
   const exam = await Exam.findOne({ slug, isActive: true });
@@ -75,15 +90,32 @@ function attemptPayload(attempt, exam, paper) {
       description: exam.description,
       slug: paper?.slug || exam.slug,
       paper_title: paper?.title || exam.title,
-      duration_minutes: exam.durationMinutes,
+      duration_minutes: attempt.durationMinutes ?? effectiveDurationMinutes(paper, exam),
       mode: attempt.mode || 'exam',
     },
   };
 }
 
-export async function getExamBySlug(slug) {
+async function assertNotBlocked(examId, name, ip) {
+  const checks = [];
+  const key = nameKey(name);
+  const addr = normalizeIp(ip);
+  if (key) checks.push({ kind: 'name', value: key });
+  if (addr) checks.push({ kind: 'ip', value: addr });
+  if (!checks.length) return;
+  const hit = await ExamBlock.findOne({ examId, $or: checks });
+  if (!hit) return;
+  if (hit.kind === 'ip') fail('This network is blocked from this exam. Ask the admin to allow you.', 403);
+  fail('This name is blocked from this exam. Ask the admin to allow you.', 403);
+}
+
+export async function getExamBySlug(slug, ip = '') {
   const { paper, exam } = await resolvePaperAndExam(slug);
   if (!exam) fail('This exam is not available', 404);
+
+  if ((paper?.mode || 'exam') !== 'read') {
+    await assertNotBlocked(exam._id, '', ip);
+  }
 
   if (paper) {
     const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
@@ -93,6 +125,49 @@ export async function getExamBySlug(slug) {
 
   const count = await Question.countDocuments({ examId: exam._id });
   return { exam: publicExam(exam, null, count) };
+}
+
+export async function getCoverImage(slug) {
+  const paper = await ExamPaper.findOne({ slug });
+  const exam = paper
+    ? await Exam.findById(paper.examId).select('+coverImage coverImageType')
+    : await Exam.findOne({ slug }).select('+coverImage coverImageType');
+  if (!exam?.coverImage?.length) fail('No cover image', 404);
+  return { buffer: exam.coverImage, type: exam.coverImageType || 'image/jpeg' };
+}
+
+export async function getShareMeta(slug) {
+  const paper = await ExamPaper.findOne({ slug });
+  const exam = paper ? await Exam.findById(paper.examId) : await Exam.findOne({ slug });
+  if (!exam) fail('This exam is not available', 404);
+
+  const n = await Question.countDocuments({ examId: exam._id });
+  const questionCount = paper ? paperQuestionCount(paper, { length: n }) : n;
+  const mode = paper?.mode || 'exam';
+  const modeLabel = mode === 'read' ? 'Read notes' : mode === 'practice' ? 'Practice quiz' : 'Exam';
+  const minutes = effectiveDurationMinutes(paper, exam);
+  const bits = [`${questionCount} question${questionCount === 1 ? '' : 's'}`, modeLabel];
+  if (mode !== 'read') bits.push(minutes ? `${minutes} min` : 'No time limit');
+  const paperTitle = paper?.title || '';
+  const headline =
+    paperTitle && paperTitle !== exam.title ? `${exam.title} · ${paperTitle}` : exam.title;
+  const extra = String(exam.description || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .slice(0, 140);
+  return {
+    title: headline,
+    description: extra ? `${bits.join(' · ')} — ${extra}` : bits.join(' · '),
+    exam_title: exam.title,
+    paper_title: paperTitle,
+    mode,
+    mode_label: modeLabel,
+    question_count: questionCount,
+    duration_minutes: minutes,
+    group: exam.group || '',
+    slug: paper?.slug || exam.slug,
+    has_cover: Boolean(exam.coverImageType),
+  };
 }
 
 const NOTES_MAX = 50;
@@ -125,13 +200,37 @@ export async function getReadNotes(slug, offset = 0, limit = 20) {
   };
 }
 
-export async function startExam(slug, name) {
+export async function startExam(slug, name, ip = '') {
   const trimmed = String(name || '').trim();
   if (trimmed.length < 2) fail('Please enter your name (at least 2 characters)');
 
   const { paper, exam } = await resolvePaperAndExam(slug);
   if (!exam) fail('This exam is not available', 404);
   if ((paper?.mode || 'exam') === 'read') fail('This is a reading set, not a quiz');
+
+  const key = nameKey(trimmed);
+  const addr = normalizeIp(ip);
+  await assertNotBlocked(exam._id, trimmed, addr);
+
+  if (paper && paper.allowMultipleAttempts === false) {
+    if (!addr) fail('Could not read your IP. Open the quiz in a browser and try again.', 400);
+    const prior = await Attempt.find({
+      examId: exam._id,
+      paperId: paper._id,
+      clientIp: addr,
+    }).sort({ startedAt: -1 });
+    const open = prior.find((a) => !a.submittedAt);
+    if (open) {
+      const resumed = await getAttempt(sid(open._id));
+      if (resumed.submitted) {
+        fail('This IP already completed this quiz. One attempt per IP.', 403);
+      }
+      return { attempt: resumed.attempt, questions: resumed.questions, answers: resumed.answers };
+    }
+    if (prior.some((a) => a.submittedAt)) {
+      fail('This IP already completed this quiz. One attempt per IP.', 403);
+    }
+  }
 
   const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
   const ids = paper ? pickQuestionIds(paper, bank) : bank.map((q) => sid(q._id));
@@ -150,12 +249,15 @@ export async function startExam(slug, name) {
     examId: exam._id,
     paperId: paper?._id || null,
     candidateName: trimmed,
+    nameKey: key,
+    clientIp: addr,
     totalQuestions: ids.length,
     questionIds: ids,
     optionMaps: maps,
     mode: paper?.mode || 'exam',
     plusMark: plus,
     minusMark: paper?.minusMark ?? 0,
+    durationMinutes: effectiveDurationMinutes(paper, exam),
     maxScore: ids.length * plus,
   });
 

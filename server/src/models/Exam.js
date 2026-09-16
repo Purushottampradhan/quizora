@@ -7,6 +7,9 @@ const examSchema = new mongoose.Schema(
     slug: { type: String, required: true, unique: true },
     durationMinutes: { type: Number, default: null },
     isActive: { type: Boolean, default: true },
+    group: { type: String, default: 'Other', trim: true, index: true },
+    coverImage: { type: Buffer, select: false },
+    coverImageType: { type: String, default: '' },
     createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }

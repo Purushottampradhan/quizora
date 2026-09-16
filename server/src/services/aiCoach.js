@@ -133,7 +133,7 @@ export async function generateSuggestions(payload) {
   const items = toItems(answers);
 
   if (!process.env.GROQ_API_KEY) {
-    console.error('[quizora] GROQ_API_KEY is missing');
+    console.error('[quiz97] GROQ_API_KEY is missing');
     return [];
   }
 
@@ -155,10 +155,10 @@ export async function generateSuggestions(payload) {
       }
     } catch (err) {
       lastErr = err;
-      console.error('[quizora] Groq coaching failed:', model, err.message);
+      console.error('[quiz97] Groq coaching failed:', model, err.message);
     }
   }
 
-  if (lastErr) console.error('[quizora] Groq coaching gave up:', lastErr.message);
+  if (lastErr) console.error('[quiz97] Groq coaching gave up:', lastErr.message);
   return [];
 }

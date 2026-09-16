@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { api, examLink } from '../../lib/api.js';
+import { api, examLink, mediaUrl } from '../../lib/api.js';
 import { useAuth } from '../../lib/AuthContext.jsx';
-import { formatDuration } from '../../lib/format.js';
+import { formatDuration, formatMarks } from '../../lib/format.js';
 import Modal from '../../components/Modal.jsx';
 import Spinner from '../../components/Spinner.jsx';
 import ShareLinks from './ShareLinks.jsx';
@@ -25,6 +25,7 @@ export default function ExamDetail() {
   const [exam, setExam] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [papers, setPapers] = useState([]);
+  const [blocks, setBlocks] = useState([]);
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -36,12 +37,19 @@ export default function ExamDetail() {
   const [clearing, setClearing] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [detail, setDetail] = useState(null);
+  const [attemptQuery, setAttemptQuery] = useState('');
+  const [attemptSort, setAttemptSort] = useState('marks');
+  const [attemptLink, setAttemptLink] = useState('all');
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsDraft, setSettingsDraft] = useState({ title: '', description: '', group: 'Other' });
+  const [blockValue, setBlockValue] = useState('');
 
   async function loadExam() {
     const data = await api(`/api/admin/exams/${id}`, { token });
     setExam(data.exam);
     setQuestions(data.questions || []);
     setPapers(data.papers || []);
+    setBlocks(data.blocks || []);
   }
 
   async function loadAttempts() {
@@ -66,12 +74,53 @@ export default function ExamDetail() {
   async function saveMeta(patch) {
     const data = await api(`/api/admin/exams/${id}`, { token, method: 'PATCH', body: patch });
     setExam(data.exam);
+    return data.exam;
+  }
+
+  function openSettings() {
+    setSettingsDraft({ title: exam.title, description: exam.description || '', group: exam.group || 'Other' });
+    setSettingsOpen(true);
+  }
+
+  async function saveSettings(e) {
+    e.preventDefault();
+    try {
+      await saveMeta({
+        title: settingsDraft.title,
+        description: settingsDraft.description,
+        group: settingsDraft.group,
+      });
+      setSettingsOpen(false);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function copyLink() {
     await navigator.clipboard.writeText(examLink(exam.slug));
     setCopied(true);
     setTimeout(() => setCopied(false), 1600);
+  }
+
+  async function uploadCover(file) {
+    if (!file) return;
+    const body = new FormData();
+    body.append('file', file);
+    try {
+      const data = await api(`/api/admin/exams/${id}/cover`, { token, method: 'POST', body, isForm: true });
+      setExam(data.exam);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeCover() {
+    try {
+      const data = await api(`/api/admin/exams/${id}/cover`, { token, method: 'DELETE' });
+      setExam(data.exam);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function saveQuestion(e) {
@@ -159,6 +208,44 @@ export default function ExamDetail() {
     }
   }
 
+  async function makeDefaultRead() {
+    const paper = papers.find((p) => p.slug === exam?.slug) || papers[0];
+    if (!paper) return;
+    try {
+      await api(`/api/admin/exams/${id}/papers/${paper.id}`, {
+        token,
+        method: 'PATCH',
+        body: { mode: 'read', title: paper.title === 'Full exam' ? 'Read notes' : paper.title },
+      });
+      await loadExam();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function addBlock(kind, value) {
+    const raw = String(value || '').trim();
+    if (!raw) return;
+    if (!confirm(`Block IP ${raw}? That network cannot start a quiz until you Allow it in Settings.`)) {
+      return;
+    }
+    try {
+      await api(`/api/admin/exams/${id}/blocks`, { token, method: 'POST', body: { kind: kind || 'ip', value: raw } });
+      await loadExam();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function removeBlock(blockId) {
+    try {
+      await api(`/api/admin/exams/${id}/blocks/${blockId}`, { token, method: 'DELETE' });
+      await loadExam();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function openAttempt(attemptId) {
     const data = await api(`/api/admin/attempts/${attemptId}`, { token });
     setDetail(data);
@@ -168,6 +255,33 @@ export default function ExamDetail() {
   if (!exam) return <p className="text-[var(--danger)]">{error || 'Exam not found'}</p>;
 
   const link = examLink(exam.slug);
+  const defaultPaper = papers.find((p) => p.slug === exam.slug) || papers.find((p) => p.is_default) || papers[0];
+  const defaultMode = defaultPaper?.mode || 'read';
+
+  const filteredAttempts = attempts
+    .filter((a) => {
+      if (attemptLink !== 'all' && a.paper_id !== attemptLink) return false;
+      const q = attemptQuery.trim().toLowerCase();
+      if (!q) return true;
+      return String(a.candidate_name || '').toLowerCase().includes(q);
+    })
+    .slice()
+    .sort((a, b) => {
+      if (attemptSort === 'time') {
+        if (Boolean(a.submitted_at) !== Boolean(b.submitted_at)) return a.submitted_at ? -1 : 1;
+        return (Number(a.time_taken_ms) || 1e15) - (Number(b.time_taken_ms) || 1e15);
+      }
+      if (attemptSort === 'name') {
+        return String(a.candidate_name || '').localeCompare(String(b.candidate_name || ''), undefined, { sensitivity: 'base' });
+      }
+      if (attemptSort === 'recent') return new Date(b.started_at || 0) - new Date(a.started_at || 0);
+      const as = a.submitted_at ? 1 : 0;
+      const bs = b.submitted_at ? 1 : 0;
+      if (bs !== as) return bs - as;
+      const marks = (Number(b.score) || 0) - (Number(a.score) || 0);
+      if (marks) return marks;
+      return (Number(a.time_taken_ms) || 0) - (Number(b.time_taken_ms) || 0);
+    });
 
   return (
     <div>
@@ -178,15 +292,27 @@ export default function ExamDetail() {
         <div>
           <h1 className="font-display text-3xl font-extrabold">{exam.title}</h1>
           <p className="mt-1 text-[var(--muted)]">{exam.description || 'No description'}</p>
+          {exam.group && <p className="mt-2"><span className="chip chip-gold">{exam.group}</span></p>}
         </div>
         <button className="btn btn-ghost px-4 py-2 text-sm" onClick={() => saveMeta({ is_active: !exam.is_active })}>
           {exam.is_active ? 'Pause exam' : 'Go live'}
         </button>
       </div>
 
-      <div className="glass mt-5 rounded-3xl p-4">
-        <p className="text-xs font-extrabold tracking-wide text-[var(--muted)]">DEFAULT SHARE LINK</p>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row">
+      <div className="glass mt-5 rounded-3xl p-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-extrabold tracking-wide text-[var(--muted)]">DEFAULT SHARE LINK</p>
+            <p className="mt-1 font-display text-lg font-bold">{defaultPaper?.title || 'Read notes'}</p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className={`chip ${defaultMode === 'read' ? 'chip-gold' : defaultMode === 'practice' ? 'chip-violet' : 'chip-coral'}`}>
+              {defaultMode === 'read' ? 'Read mode' : defaultMode === 'practice' ? 'Practice' : 'Exam'}
+            </span>
+            <span className="chip chip-muted">{defaultPaper?.question_count ?? questions.length} questions</span>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input className="field" readOnly value={link} />
           <div className="flex gap-2">
             <button className="btn btn-primary whitespace-nowrap px-4" onClick={copyLink}>
@@ -195,12 +321,20 @@ export default function ExamDetail() {
             <a className="btn btn-ghost whitespace-nowrap px-4" href={link} target="_blank" rel="noreferrer">
               Open
             </a>
+            {defaultMode !== 'read' && (
+              <button className="btn btn-ghost whitespace-nowrap px-4" onClick={makeDefaultRead}>
+                Switch to read
+              </button>
+            )}
           </div>
         </div>
-        <p className="mt-2 text-xs text-[var(--muted)]">Practice, shuffle, negative marks, and 1–20 / 21–40 sets are in the Links tab.</p>
+        <p className="mt-3 text-sm text-[var(--muted)]">
+          Students open notes first: question, answer, and explanation. Create extra exam or practice links in the
+          Links tab for timed quizzes and leaderboards.
+        </p>
       </div>
 
-      <div className="mt-5 flex gap-2 rounded-full bg-white/5 p-1">
+      <div className="mt-5 flex gap-1 overflow-x-auto rounded-full bg-white/5 p-1">
         {[
           ['questions', `Questions (${questions.length})`],
           ['links', `Links (${papers.length})`],
@@ -209,10 +343,13 @@ export default function ExamDetail() {
         ].map(([key, label]) => (
           <button
             key={key}
-            className={`flex-1 rounded-full px-3 py-2 text-sm font-extrabold ${
+            className={`flex-1 whitespace-nowrap rounded-full px-3 py-2 text-sm font-extrabold ${
               tab === key ? 'bg-[var(--coral)] text-[#2a0b12]' : 'text-[var(--muted)]'
             }`}
-            onClick={() => setTab(key)}
+            onClick={() => {
+              if (key === 'settings') openSettings();
+              else setTab(key);
+            }}
           >
             {label}
           </button>
@@ -222,7 +359,21 @@ export default function ExamDetail() {
       {error && <p className="mt-4 text-sm text-[var(--danger)]">{error}</p>}
 
       {tab === 'links' && (
-        <ShareLinks examId={id} token={token} questions={questions} papers={papers} onChanged={loadExam} />
+        <ShareLinks
+          examId={id}
+          examSlug={exam.slug}
+          token={token}
+          questions={questions}
+          papers={papers}
+          attempts={attempts}
+          onChanged={async () => {
+            await Promise.all([loadExam(), loadAttempts()]);
+          }}
+          onOpenAttempt={openAttempt}
+          onBlock={addBlock}
+          blocks={blocks}
+          defaultDuration={exam.duration_minutes || ''}
+        />
       )}
 
       {tab === 'questions' && (
@@ -253,7 +404,7 @@ export default function ExamDetail() {
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'quizora-questions-template.xlsx';
+                a.download = 'quiz97-questions-template.xlsx';
                 a.click();
                 URL.revokeObjectURL(url);
               }}
@@ -283,7 +434,7 @@ export default function ExamDetail() {
           </div>
           <p className="mt-2 text-sm text-[var(--muted)]">
             Columns: question, option_a–d, correct_answer (A–D), explanation, remark. Max 500 questions. Sample files live in{' '}
-            <code>quizora/samples</code>.
+            <code>samples</code>.
           </p>
 
           {showForm && (
@@ -374,81 +525,187 @@ export default function ExamDetail() {
       )}
 
       {tab === 'attempts' && (
-        <div className="mt-5 overflow-x-auto">
+        <div className="mt-5">
           {!attempts.length ? (
-            <p className="text-[var(--muted)]">No one has started this exam yet. Share the link.</p>
+            <p className="text-[var(--muted)]">No one has started a quiz yet. Share an exam or practice link.</p>
           ) : (
-            <table className="min-w-full text-left text-sm">
-              <thead className="text-[var(--muted)]">
-                <tr>
-                  <th className="px-2 py-2">Name</th>
-                  <th className="px-2 py-2">Score</th>
-                  <th className="px-2 py-2">Total time</th>
-                  <th className="px-2 py-2">Avg / Q</th>
-                  <th className="px-2 py-2">Status</th>
-                  <th className="px-2 py-2"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {attempts.map((a) => (
-                  <tr key={a.id} className="border-t border-white/10">
-                    <td className="px-2 py-3 font-bold">{a.candidate_name}</td>
-                    <td className="px-2 py-3">
-                      {a.submitted_at ? `${a.score}/${a.total_questions}` : `${a.answered_count} answered`}
-                    </td>
-                    <td className="px-2 py-3">{a.submitted_at ? formatDuration(a.time_taken_ms) : '—'}</td>
-                    <td className="px-2 py-3">{a.avg_time_ms ? formatDuration(a.avg_time_ms) : '—'}</td>
-                    <td className="px-2 py-3">{a.submitted_at ? 'Submitted' : 'In progress'}</td>
-                    <td className="px-2 py-3">
-                      <button className="btn btn-ghost px-3 py-1 text-xs" onClick={() => openAttempt(a.id)}>
-                        Details
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+            <>
+              <div className="mb-4 grid gap-2 sm:grid-cols-3">
+                <input
+                  className="field py-2 text-sm"
+                  value={attemptQuery}
+                  onChange={(e) => setAttemptQuery(e.target.value)}
+                  placeholder="Search by name"
+                />
+                <select className="field py-2 text-sm" value={attemptSort} onChange={(e) => setAttemptSort(e.target.value)}>
+                  <option value="marks">Top by marks</option>
+                  <option value="time">Fastest time</option>
+                  <option value="name">Name A–Z</option>
+                  <option value="recent">Most recent</option>
+                </select>
+                <select className="field py-2 text-sm" value={attemptLink} onChange={(e) => setAttemptLink(e.target.value)}>
+                  <option value="all">All links</option>
+                  {papers
+                    .filter((p) => p.mode !== 'read')
+                    .map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.title}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="admin-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Link</th>
+                      <th>Marks</th>
+                      <th>Time</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredAttempts.map((a, i) => (
+                      <tr key={a.id}>
+                        <td className="text-[var(--muted)]">{i + 1}</td>
+                        <td className="font-bold">{a.candidate_name}</td>
+                        <td className="text-[var(--muted)]">{a.paper_title || '—'}</td>
+                        <td>
+                          {a.submitted_at
+                            ? `${formatMarks(a.score)} / ${formatMarks(a.max_score || a.total_questions)}`
+                            : `${a.answered_count} answered`}
+                        </td>
+                        <td>{a.submitted_at ? formatDuration(a.time_taken_ms) : '—'}</td>
+                        <td>
+                          <span className={`chip ${a.submitted_at ? 'chip-mint' : 'chip-muted'}`}>
+                            {a.submitted_at ? 'Submitted' : 'In progress'}
+                          </span>
+                        </td>
+                        <td>
+                          <button className="btn btn-ghost px-3 py-1 text-xs" onClick={() => openAttempt(a.id)}>
+                            Details
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {!filteredAttempts.length && (
+                <p className="mt-3 text-sm text-[var(--muted)]">No attempts match these filters.</p>
+              )}
+            </>
           )}
         </div>
       )}
 
-      {tab === 'settings' && (
-        <form
-          className="glass mt-5 grid gap-3 rounded-3xl p-5"
-          onSubmit={async (e) => {
-            e.preventDefault();
-            await saveMeta({
-              title: exam.title,
-              description: exam.description,
-              duration_minutes: exam.duration_minutes,
-            });
-          }}
-        >
+      <Modal open={settingsOpen} title="Exam settings" onClose={() => setSettingsOpen(false)}>
+        <form className="grid gap-3" onSubmit={saveSettings}>
           <label className="grid gap-1 text-sm font-bold">
             Title
-            <input className="field" value={exam.title} onChange={(e) => setExam({ ...exam, title: e.target.value })} />
+            <input
+              className="field"
+              value={settingsDraft.title}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, title: e.target.value })}
+              required
+            />
           </label>
           <label className="grid gap-1 text-sm font-bold">
             Description
             <textarea
               className="field min-h-24"
-              value={exam.description || ''}
-              onChange={(e) => setExam({ ...exam, description: e.target.value })}
+              value={settingsDraft.description}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, description: e.target.value })}
             />
           </label>
           <label className="grid gap-1 text-sm font-bold">
-            Duration (minutes)
+            Cover image
+            <span className="font-normal text-xs text-[var(--muted)]">
+              Students see this before they start. It is also used when the exam link is shared.
+            </span>
+            {exam.cover_url ? (
+              <img
+                src={mediaUrl(exam.cover_url, exam.updated_at)}
+                alt=""
+                className="mt-1 max-h-40 w-full rounded-2xl object-cover"
+              />
+            ) : null}
+            <input
+              className="field py-2 text-sm font-normal"
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/gif"
+              onChange={(e) => {
+                uploadCover(e.target.files?.[0]);
+                e.target.value = '';
+              }}
+            />
+            {exam.cover_url ? (
+              <button type="button" className="btn btn-ghost w-fit px-3 py-1.5 text-xs" onClick={removeCover}>
+                Remove image
+              </button>
+            ) : null}
+          </label>
+          <label className="grid gap-1 text-sm font-bold">
+            Exam group
             <input
               className="field"
-              type="number"
-              min="1"
-              value={exam.duration_minutes || ''}
-              onChange={(e) => setExam({ ...exam, duration_minutes: e.target.value })}
+              value={settingsDraft.group}
+              onChange={(e) => setSettingsDraft({ ...settingsDraft, group: e.target.value })}
+              placeholder="RRB, TET, UPSC, Other…"
             />
           </label>
-          <button className="btn btn-primary w-fit">Save settings</button>
+          <p className="text-xs text-[var(--muted)]">
+            Time limit, marks, one-time vs multiple attempts, and mode live on each share link.
+          </p>
+          <div className="mt-2 rounded-2xl bg-black/20 p-3">
+            <p className="text-sm font-bold">Blocked IPs</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              A blocked IP cannot start any quiz on this exam until you allow it.
+            </p>
+            <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto]">
+              <input
+                className="field py-2 text-sm"
+                value={blockValue}
+                onChange={(e) => setBlockValue(e.target.value)}
+                placeholder="e.g. 103.21.44.10"
+              />
+              <button
+                type="button"
+                className="btn btn-primary px-4 py-2 text-sm"
+                onClick={async () => {
+                  await addBlock('ip', blockValue);
+                  setBlockValue('');
+                }}
+              >
+                Block IP
+              </button>
+            </div>
+            <div className="mt-3 grid gap-2">
+              {blocks.map((b) => (
+                <div key={b.id} className="flex items-center justify-between gap-2 rounded-xl bg-white/5 px-3 py-2 text-sm">
+                  <span>
+                    <span className={`chip ${b.kind === 'ip' ? 'chip-coral' : 'chip-gold'}`}>{b.kind}</span>
+                    <span className="ml-2 font-bold">{b.label || b.value}</span>
+                  </span>
+                  <button type="button" className="btn btn-ghost px-3 py-1 text-xs" onClick={() => removeBlock(b.id)}>
+                    Allow
+                  </button>
+                </div>
+              ))}
+              {!blocks.length && <p className="text-xs text-[var(--muted)]">Nobody is blocked.</p>}
+            </div>
+          </div>
+          <div className="mt-1 flex gap-2">
+            <button type="button" className="btn btn-ghost flex-1" onClick={() => setSettingsOpen(false)}>
+              Cancel
+            </button>
+            <button className="btn btn-primary flex-1">Save settings</button>
+          </div>
         </form>
-      )}
+      </Modal>
 
       <Modal open={confirmClear} title="Delete all questions?" onClose={() => !clearing && setConfirmClear(false)}>
         <p className="text-[var(--muted)]">

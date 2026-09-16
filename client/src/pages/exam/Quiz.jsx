@@ -7,12 +7,13 @@ import Spinner from '../../components/Spinner.jsx';
 const LETTERS = ['A', 'B', 'C', 'D'];
 
 function skipKey(attemptId) {
-  return `quizora-skip-${attemptId}`;
+  return `quiz97-skip-${attemptId}`;
 }
 
 function loadSkips(attemptId) {
   try {
-    const raw = localStorage.getItem(skipKey(attemptId));
+    const raw =
+      localStorage.getItem(skipKey(attemptId)) || localStorage.getItem(`quizora-skip-${attemptId}`);
     return raw ? JSON.parse(raw) : [];
   } catch {
     return [];

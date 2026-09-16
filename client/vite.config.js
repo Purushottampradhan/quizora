@@ -1,9 +1,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import examOg from './vite-plugin-exam-og.js';
 
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), examOg()],
   envDir: process.env.RENDER ? '.' : '..',
   server: {
     port: 5173,

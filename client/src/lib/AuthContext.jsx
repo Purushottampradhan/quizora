@@ -1,7 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { api } from './api.js';
 
-const TOKEN_KEY = 'quizora_token';
+const TOKEN_KEY = 'quiz97_token';
+const LEGACY_TOKEN_KEY = 'quizora_token';
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
@@ -10,10 +11,14 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = localStorage.getItem(TOKEN_KEY) || localStorage.getItem(LEGACY_TOKEN_KEY);
     if (!token) {
       setReady(true);
       return;
+    }
+    if (!localStorage.getItem(TOKEN_KEY) && localStorage.getItem(LEGACY_TOKEN_KEY)) {
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.removeItem(LEGACY_TOKEN_KEY);
     }
     api('/api/admin/me', { token })
       .then((data) => {
