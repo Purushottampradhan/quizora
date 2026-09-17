@@ -1,4 +1,5 @@
 import zlib from 'node:zlib';
+import sharp from 'sharp';
 
 const W = 1200;
 const H = 630;
@@ -195,4 +196,27 @@ export function renderShareCard(meta) {
     chunk('IDAT', zlib.deflateSync(raw, { level: 9 })),
     chunk('IEND', Buffer.alloc(0)),
   ]);
+}
+
+export async function renderShareImage(coverBuffer, meta) {
+  if (coverBuffer?.length) {
+    try {
+      const body = await sharp(coverBuffer)
+        .rotate()
+        .resize(W, H, { fit: 'cover', position: 'centre' })
+        .jpeg({ quality: 86, chromaSubsampling: '4:2:0' })
+        .toBuffer();
+      return { mime: 'image/jpeg', body };
+    } catch {
+      // fall through to the generated card
+    }
+  }
+
+  const png = renderShareCard(meta);
+  try {
+    const body = await sharp(png).jpeg({ quality: 90 }).toBuffer();
+    return { mime: 'image/jpeg', body };
+  } catch {
+    return { mime: 'image/png', body: png };
+  }
 }

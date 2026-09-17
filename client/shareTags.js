@@ -16,6 +16,8 @@ export function applyShareTags(html, meta, { pageUrl, imageUrl }) {
     <meta property="og:description" content="${description}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:image" content="${image}" />
+    <meta property="og:image:secure_url" content="${image}" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="${title}" />
@@ -39,10 +41,10 @@ export function requestOrigin(req) {
   return `${proto}://${host}`;
 }
 
-export function shareImageUrl(origin, slug, apiBase = '', hasCover = false) {
+export function shareImageUrl(origin, slug, apiBase = '', cacheKey = '') {
   const api = String(apiBase || '').replace(/\/$/, '');
-  const file = hasCover ? 'cover' : 'og.png';
-  const path = `/api/public/exams/${encodeURIComponent(slug)}/${file}`;
-  if (api && !/localhost|127\.0\.0\.1/i.test(api)) return `${api}${path}`;
-  return `${origin}${path}`;
+  const path = `/api/public/exams/${encodeURIComponent(slug)}/og.png`;
+  const base = api && !/localhost|127\.0\.0\.1/i.test(api) ? `${api}${path}` : `${origin}${path}`;
+  if (!cacheKey) return base;
+  return `${base}?v=${encodeURIComponent(cacheKey)}`;
 }

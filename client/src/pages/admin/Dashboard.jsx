@@ -664,7 +664,7 @@ function ExamCard({ exam, copied, onCopy, onDuplicate, onEdit, onDelete, hideGro
   return (
     <article className="overflow-hidden rounded-3xl bg-black/20">
       {exam.cover_url ? (
-        <img src={mediaUrl(exam.cover_url, exam.updated_at)} alt="" className="h-36 w-full object-cover" />
+        <img src={mediaUrl(exam.cover_url, exam.updated_at)} alt="" className="exam-cover" />
       ) : null}
       <div className="p-5">
         <div className="flex items-start justify-between gap-3">

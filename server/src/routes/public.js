@@ -14,7 +14,7 @@ import {
 } from '../services/quizService.js';
 import { generateSuggestions } from '../services/aiCoach.js';
 import { clientIp } from '../lib/identity.js';
-import { renderShareCard } from '../services/ogImage.js';
+import { renderShareImage } from '../services/ogImage.js';
 
 const router = Router();
 
@@ -70,10 +70,16 @@ router.get('/exams/:slug/share', async (req, res) => {
 router.get('/exams/:slug/og.png', async (req, res) => {
   try {
     const meta = await getShareMeta(req.params.slug);
-    const png = renderShareCard(meta);
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=300');
-    res.send(png);
+    let cover = null;
+    try {
+      cover = await getCoverImage(req.params.slug);
+    } catch {
+      cover = null;
+    }
+    const image = await renderShareImage(cover?.buffer, meta);
+    res.setHeader('Content-Type', image.mime);
+    res.setHeader('Cache-Control', 'public, max-age=60');
+    res.send(image.body);
   } catch (err) {
     handle(err, res);
   }

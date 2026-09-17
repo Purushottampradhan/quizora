@@ -167,6 +167,7 @@ export async function getShareMeta(slug) {
     group: exam.group || '',
     slug: paper?.slug || exam.slug,
     has_cover: Boolean(exam.coverImageType),
+    updated_at: exam.updatedAt,
   };
 }
 

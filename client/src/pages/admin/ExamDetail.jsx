@@ -630,7 +630,7 @@ export default function ExamDetail() {
               <img
                 src={mediaUrl(exam.cover_url, exam.updated_at)}
                 alt=""
-                className="mt-1 max-h-40 w-full rounded-2xl object-cover"
+                className="exam-cover mt-1 rounded-2xl"
               />
             ) : null}
             <input

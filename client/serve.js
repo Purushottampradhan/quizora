@@ -37,7 +37,7 @@ async function examHtml(slug, host) {
   const meta = await res.json();
   return applyShareTags(html, meta, {
     pageUrl: `${origin}/e/${encodeURIComponent(slug)}`,
-    imageUrl: shareImageUrl(origin, slug, API, meta.has_cover),
+    imageUrl: shareImageUrl(origin, slug, API, meta.updated_at),
   });
 }
 

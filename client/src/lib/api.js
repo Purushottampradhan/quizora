@@ -17,7 +17,9 @@ export async function api(path, { token, method = 'GET', body, isForm } = {}) {
 }
 
 export function examLink(slug) {
-  return `${window.location.origin}/e/${slug}`;
+  const origin =
+    BASE && !/localhost|127\.0\.0\.1/i.test(BASE) ? BASE : window.location.origin;
+  return `${origin.replace(/\/$/, '')}/e/${slug}`;
 }
 
 export function mediaUrl(path, cacheKey) {

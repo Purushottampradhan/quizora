@@ -46,6 +46,15 @@ button, input, select, textarea { font-family: inherit; }
   backdrop-filter: blur(18px);
 }
 
+.exam-cover {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  object-position: center;
+  background: #1a1240;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;

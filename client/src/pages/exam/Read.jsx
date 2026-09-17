@@ -195,7 +195,7 @@ export default function Read() {
               <img
                 src={mediaUrl(exam.cover_url)}
                 alt=""
-                className="mb-4 max-h-56 w-full rounded-3xl object-cover"
+                className="exam-cover mb-4 -mx-4 w-[calc(100%+2rem)] max-w-none"
               />
             ) : null}
             <span className="chip chip-gold">Read notes</span>
