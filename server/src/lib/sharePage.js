@@ -37,7 +37,7 @@ export function examShareHtml({ title, description, pageUrl, imageUrl, examUrl }
   ${redirect ? `<meta http-equiv="refresh" content="0;url=${open}" />` : ''}
 </head>
 <body style="font-family:sans-serif;background:#120c2a;color:#fff;padding:32px">
-  <p>Opening <a href="${open}" style="color:#ffd36a">${t}</a>…</p>
+  <p>Opening your quiz: <a href="${open}" style="color:#ffd36a">${t}</a>…</p>
   ${redirect ? `<script>location.replace(${JSON.stringify(examUrl)});</script>` : ''}
 </body>
 </html>`;

@@ -245,7 +245,7 @@ export default function Quiz() {
   if (error && !payload) {
     return <p className="p-6 text-[var(--danger)]">{error}</p>;
   }
-  if (!payload || !question) return <Spinner label="Loading questions" />;
+  if (!payload || !question) return <Spinner label="Loading your questions" />;
 
   return (
     <div className="quiz-shell mx-auto w-full max-w-3xl px-2.5 pt-2 sm:px-4">
@@ -254,18 +254,18 @@ export default function Quiz() {
           <div className="min-w-0">
             <p className="font-display truncate text-[0.95rem] font-bold leading-tight">{exam.title}</p>
             <p className="text-[11px] text-[var(--muted)]">
-              {isPractice ? 'Practice · ' : 'Exam · '}
-              {done}/{questions.length} done · {skipCount} skip · {left} left
+              {isPractice ? 'Practice · ' : 'Quiz · '}
+              {done}/{questions.length} answered · {skipCount} skipped · {left} left
             </p>
           </div>
           <div className="shrink-0 text-right leading-tight">
             {remaining != null && (
               <p className={`font-display text-base font-extrabold ${remaining < 60000 ? 'text-[var(--danger)]' : ''}`}>
                 {formatClock(remaining)}
-                <span className="ml-1 text-[10px] font-bold text-[var(--muted)]">left</span>
+                <span className="ml-1 text-[10px] font-bold text-[var(--muted)]">time left</span>
               </p>
             )}
-            <p className="text-[10px] text-[var(--gold)]">Q {formatClock(qClock)}</p>
+            <p className="text-[10px] text-[var(--gold)]">Time {formatClock(qClock)}</p>
           </div>
         </div>
         <div className="progress-track mt-2">
@@ -280,7 +280,7 @@ export default function Quiz() {
                 key={q.id}
                 className={`q-pill ${isDone ? 'done' : ''} ${isSkip ? 'skipped' : ''} ${i === index ? 'current' : ''}`}
                 onClick={() => goTo(i)}
-                title={isDone ? 'Answered' : isSkip ? 'Skipped' : 'Not answered'}
+                title={isDone ? 'Answered' : isSkip ? 'Skipped' : 'Not answered yet'}
               >
                 {i + 1}
               </button>
@@ -288,16 +288,16 @@ export default function Quiz() {
           })}
         </div>
         <p className="mt-1 text-[10px] font-bold text-[var(--muted)]">
-          <span className="text-[var(--coral)]">●</span> now
-          <span className="ml-2 text-[var(--mint)]">● done</span>
-          <span className="ml-2 text-[var(--gold)]">● skip</span>
+          <span className="text-[var(--coral)]">●</span> this question
+          <span className="ml-2 text-[var(--mint)]">● answered</span>
+          <span className="ml-2 text-[var(--gold)]">● skipped</span>
         </p>
       </header>
 
       <section className="mt-2 flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl glass px-3 py-2.5">
         <p className="text-[10px] font-extrabold tracking-wide text-[var(--muted)]">
-          Q {index + 1}/{questions.length}
-          {skipped.includes(question.id) && !answers[question.id] ? ' · SKIPPED' : ''}
+          Question {index + 1} of {questions.length}
+          {skipped.includes(question.id) && !answers[question.id] ? ' · skipped' : ''}
         </p>
         <h1 className="quiz-stem">{question.question_text}</h1>
         <div className="mt-2 grid min-h-0 flex-1 content-start gap-1.5 overflow-y-auto pb-1">
@@ -322,7 +322,7 @@ export default function Quiz() {
         </div>
         {reveal && (
           <p className="mt-2 rounded-xl bg-black/25 p-2 text-xs leading-relaxed">
-            {reveal.is_correct ? 'Correct. ' : `Wrong. Correct is ${reveal.correct_option}. `}
+            {reveal.is_correct ? 'Right. ' : `That’s not right. The correct answer is ${reveal.correct_option}. `}
             {reveal.explanation}
           </p>
         )}
@@ -339,11 +339,11 @@ export default function Quiz() {
             onClick={skipQuestion}
             disabled={Boolean(answers[question.id]) || Boolean(reveal)}
           >
-            Skip
+            Skip for now
           </button>
           {isPractice && reveal && practiceNext !== index ? (
             <button className="btn btn-primary flex-[1.3]" onClick={nextAfterPractice}>
-              Next
+              Next question
             </button>
           ) : (
             <button
@@ -351,7 +351,7 @@ export default function Quiz() {
               onClick={() => (left > 0 && !reveal ? setConfirm(true) : submit())}
               disabled={submitting}
             >
-              {submitting ? '…' : 'Submit'}
+              {submitting ? 'Please wait…' : 'Finish'}
             </button>
           )}
         </div>
@@ -360,17 +360,17 @@ export default function Quiz() {
       {confirm && (
         <div className="fixed inset-0 z-30 flex items-end justify-center bg-black/55 p-4 sm:items-center">
           <div className="glass w-full max-w-md rounded-3xl p-5">
-            <h2 className="font-display text-xl font-bold">Submit now?</h2>
+            <h2 className="font-display text-xl font-bold">Finish now?</h2>
             <p className="mt-2 text-[var(--muted)]">
-              {left} unanswered
-              {skipCount ? `, including ${skipCount} skipped` : ''}. You can tap a gold number to go back, or submit anyway.
+              You still have {left} question{left === 1 ? '' : 's'} without an answer
+              {skipCount ? `, including ${skipCount} you skipped` : ''}. You can tap a gold number to go back, or finish anyway.
             </p>
             <div className="mt-4 flex gap-2">
               <button className="btn btn-ghost flex-1" onClick={() => setConfirm(false)}>
                 Keep going
               </button>
               <button className="btn btn-primary flex-1" onClick={submit} disabled={submitting}>
-                Submit
+                Finish quiz
               </button>
             </div>
           </div>

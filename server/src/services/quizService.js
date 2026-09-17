@@ -105,13 +105,12 @@ async function assertNotBlocked(examId, name, ip) {
   if (!checks.length) return;
   const hit = await ExamBlock.findOne({ examId, $or: checks });
   if (!hit) return;
-  if (hit.kind === 'ip') fail('This network is blocked from this exam. Ask the admin to allow you.', 403);
-  fail('This name is blocked from this exam. Ask the admin to allow you.', 403);
+  fail('You are not allowed to take this quiz. Please ask your teacher for help.', 403);
 }
 
 export async function getExamBySlug(slug, ip = '') {
   const { paper, exam } = await resolvePaperAndExam(slug);
-  if (!exam) fail('This exam is not available', 404);
+  if (!exam) fail('This quiz is not available right now.', 404);
 
   if ((paper?.mode || 'exam') !== 'read') {
     await assertNotBlocked(exam._id, '', ip);
@@ -139,7 +138,7 @@ export async function getCoverImage(slug) {
 export async function getShareMeta(slug) {
   const paper = await ExamPaper.findOne({ slug });
   const exam = paper ? await Exam.findById(paper.examId) : await Exam.findOne({ slug });
-  if (!exam) fail('This exam is not available', 404);
+  if (!exam) fail('This quiz is not available right now.', 404);
 
   const n = await Question.countDocuments({ examId: exam._id });
   const questionCount = paper ? paperQuestionCount(paper, { length: n }) : n;
@@ -175,9 +174,9 @@ const NOTES_MAX = 50;
 
 export async function getReadNotes(slug, offset = 0, limit = 20) {
   const { paper, exam } = await resolvePaperAndExam(slug);
-  if (!exam) fail('This exam is not available', 404);
+  if (!exam) fail('This quiz is not available right now.', 404);
   if ((paper?.mode || 'exam') !== 'read') {
-    fail('This link is a quiz, not a reading set', 400);
+    fail('This link is for a quiz, not for reading notes.', 400);
   }
 
   const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
@@ -203,18 +202,18 @@ export async function getReadNotes(slug, offset = 0, limit = 20) {
 
 export async function startExam(slug, name, ip = '') {
   const trimmed = String(name || '').trim();
-  if (trimmed.length < 2) fail('Please enter your name (at least 2 characters)');
+  if (trimmed.length < 2) fail('Please type your full name.');
 
   const { paper, exam } = await resolvePaperAndExam(slug);
-  if (!exam) fail('This exam is not available', 404);
-  if ((paper?.mode || 'exam') === 'read') fail('This is a reading set, not a quiz');
+  if (!exam) fail('This quiz is not available right now.', 404);
+  if ((paper?.mode || 'exam') === 'read') fail('This link is for reading notes, not a quiz.');
 
   const key = nameKey(trimmed);
   const addr = normalizeIp(ip);
   await assertNotBlocked(exam._id, trimmed, addr);
 
   if (paper && paper.allowMultipleAttempts === false) {
-    if (!addr) fail('Could not read your IP. Open the quiz in a browser and try again.', 400);
+    if (!addr) fail('We could not start the quiz. Please open the link again in your browser.', 400);
     const prior = await Attempt.find({
       examId: exam._id,
       paperId: paper._id,
@@ -224,18 +223,18 @@ export async function startExam(slug, name, ip = '') {
     if (open) {
       const resumed = await getAttempt(sid(open._id));
       if (resumed.submitted) {
-        fail('This IP already completed this quiz. One attempt per IP.', 403);
+        fail('You have already completed this quiz.', 403);
       }
       return { attempt: resumed.attempt, questions: resumed.questions, answers: resumed.answers };
     }
     if (prior.some((a) => a.submittedAt)) {
-      fail('This IP already completed this quiz. One attempt per IP.', 403);
+      fail('You have already completed this quiz.', 403);
     }
   }
 
   const bank = await Question.find({ examId: exam._id }).sort({ orderIndex: 1 });
   const ids = paper ? pickQuestionIds(paper, bank) : bank.map((q) => sid(q._id));
-  if (!ids.length) fail('This exam has no questions yet');
+  if (!ids.length) fail('This quiz has no questions yet. Please check back later.');
 
   const questions = await questionsByIds(ids);
   const maps = {};
@@ -271,7 +270,7 @@ export async function startExam(slug, name, ip = '') {
 
 export async function getAttempt(id) {
   const attempt = await Attempt.findById(id);
-  if (!attempt) fail('Attempt not found', 404);
+  if (!attempt) fail('We could not find this quiz. Please open your link again.', 404);
   if (attempt.submittedAt) {
     return { submitted: true, attempt_id: sid(attempt._id) };
   }
@@ -310,16 +309,16 @@ export async function getAttempt(id) {
 
 export async function saveAnswer(attemptId, questionId, selected, timeMs) {
   const attempt = await Attempt.findById(attemptId);
-  if (!attempt || attempt.submittedAt) fail('This attempt is closed');
+  if (!attempt || attempt.submittedAt) fail('This quiz is already finished.');
 
   const letter = String(selected || '').trim().toUpperCase();
-  if (!['A', 'B', 'C', 'D'].includes(letter)) fail('Pick option A, B, C, or D');
+  if (!['A', 'B', 'C', 'D'].includes(letter)) fail('Please tap one of the four answers.');
 
   const allowed = (attempt.questionIds || []).map(sid);
-  if (allowed.length && !allowed.includes(sid(questionId))) fail('Invalid question');
+  if (allowed.length && !allowed.includes(sid(questionId))) fail('That question is not part of this quiz.');
 
   const question = await Question.findOne({ _id: questionId, examId: attempt.examId });
-  if (!question) fail('Invalid question');
+  if (!question) fail('That question is not part of this quiz.');
 
   const qmap = optionMapFor(attempt, questionId);
   const orig = qmap[letter] || letter;
@@ -364,7 +363,7 @@ export async function heartbeat(attemptId, questionId, timeMs) {
 
 export async function submitExam(attemptId, timings = {}) {
   const attempt = await Attempt.findById(attemptId);
-  if (!attempt) fail('Attempt not found', 404);
+  if (!attempt) fail('We could not find this quiz. Please open your link again.', 404);
   if (attempt.submittedAt) {
     return {
       attempt_id: sid(attempt._id),
@@ -456,7 +455,7 @@ export async function saveAi(attemptId, suggestions) {
 
 export async function getResult(id) {
   const attempt = await Attempt.findById(id);
-  if (!attempt || !attempt.submittedAt) fail('Result not ready', 404);
+  if (!attempt || !attempt.submittedAt) fail('Your result is not ready yet. Please wait a moment and refresh.', 404);
 
   const exam = await Exam.findById(attempt.examId);
   const paper = attempt.paperId ? await ExamPaper.findById(attempt.paperId) : null;

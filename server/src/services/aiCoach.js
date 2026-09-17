@@ -45,46 +45,42 @@ function toItems(answers) {
   });
 }
 
-function asTips(value) {
-  if (!value) return [];
-  if (Array.isArray(value)) return value.map(String).map((s) => s.trim()).filter(Boolean);
-  if (Array.isArray(value.suggestions)) return asTips(value.suggestions);
-  if (Array.isArray(value.tips)) return asTips(value.tips);
-  return [];
+function asParagraph(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value.replace(/\s+/g, ' ').trim();
+  if (typeof value === 'object') {
+    const direct = value.paragraph || value.summary || value.feedback || value.advice;
+    if (direct) return asParagraph(direct);
+    if (Array.isArray(value.suggestions)) return asParagraph(value.suggestions.join(' '));
+    if (Array.isArray(value.tips)) return asParagraph(value.tips.join(' '));
+  }
+  if (Array.isArray(value)) return asParagraph(value.filter(Boolean).join(' '));
+  return '';
 }
 
-function parseTipList(text) {
-  if (!text) return [];
+function parseParagraph(text) {
+  if (!text) return '';
   let raw = String(text).trim();
   raw = raw.replace(/^```(?:json)?\s*/i, '').replace(/```$/i, '').trim();
 
   const tryParse = (s) => {
     try {
-      return asTips(JSON.parse(s));
+      return asParagraph(JSON.parse(s));
     } catch {
-      return [];
+      return '';
     }
   };
 
-  let tips = tryParse(raw);
-  if (tips.length) return tips;
+  let paragraph = tryParse(raw);
+  if (paragraph) return paragraph;
 
-  const arrMatch = raw.match(/\[[\s\S]*\]/);
-  if (arrMatch) {
-    tips = tryParse(arrMatch[0]);
-    if (tips.length) return tips;
-  }
   const objMatch = raw.match(/\{[\s\S]*\}/);
   if (objMatch) {
-    tips = tryParse(objMatch[0]);
-    if (tips.length) return tips;
+    paragraph = tryParse(objMatch[0]);
+    if (paragraph) return paragraph;
   }
 
-  return raw
-    .split(/\n+/)
-    .map((line) => line.replace(/^\s*(?:[-*]|\d+[.)])\s*/, '').trim())
-    .filter((line) => line.length > 24)
-    .slice(0, 3);
+  return raw.replace(/\s+/g, ' ').trim();
 }
 
 function client() {
@@ -95,36 +91,47 @@ function client() {
   });
 }
 
+function overview(items, meta) {
+  const wrong = items.filter((a) => a.status === 'wrong');
+  const skipped = items.filter((a) => a.status === 'skipped');
+  const slow = items.filter((a) => a.slow);
+  return {
+    student: meta.name,
+    exam: meta.examTitle,
+    score: `${meta.score}/${meta.total} (${meta.percent}%)`,
+    correct: items.filter((a) => a.status === 'correct').length,
+    wrong: wrong.length,
+    skipped: skipped.length,
+    slow_questions: slow.length,
+    all_responses: items,
+    instruction:
+      'Write one flowing paragraph (4–8 sentences) about this student overall. Use the full set of answers together: patterns, weak topics, skipping, and pacing. Do not go question by question, do not list Q1/Q2, and do not write bullet points. Do not invent questions.',
+  };
+}
+
 async function askGroq(items, meta, model) {
   const groq = client();
   const completion = await groq.chat.completions.create({
     model,
     temperature: 0.4,
-    max_completion_tokens: 700,
+    max_completion_tokens: 500,
     include_reasoning: false,
     response_format: { type: 'json_object' },
     messages: [
       {
         role: 'system',
         content:
-          'You are a kind, practical exam coach. Reply with JSON only: {"suggestions":["tip1","tip2"]} using exactly 2 or 3 short strings. Each tip must be useful and specific to this student. Do not invent questions. Do not give more than 3 tips.',
+          'You are a kind exam coach. Write in simple everyday words a student can understand. Reply with JSON only: {"paragraph":"..."} containing exactly one paragraph. Judge the whole quiz as a whole, never question by question. No lists, no numbering, no headings.',
       },
       {
         role: 'user',
-        content: JSON.stringify({
-          student: meta.name,
-          exam: meta.examTitle,
-          score: `${meta.score}/${meta.total} (${meta.percent}%)`,
-          responses: items,
-          instruction:
-            'Give exactly 2 or 3 helpful suggestions. Focus on the biggest gaps: wrong answers, skipped questions, or slow timing. Mention the question number and what they chose vs the correct idea. Keep each tip to 1–3 sentences.',
-        }),
+        content: JSON.stringify(overview(items, meta)),
       },
     ],
   });
 
   const msg = completion.choices?.[0]?.message;
-  return parseTipList(msg?.content || msg?.reasoning || '');
+  return parseParagraph(msg?.content || msg?.reasoning || '');
 }
 
 export async function generateSuggestions(payload) {
@@ -140,18 +147,10 @@ export async function generateSuggestions(payload) {
   let lastErr;
   for (const model of groqModels()) {
     try {
-      const tips = await askGroq(items, { name, examTitle, score, total, percent }, model);
-      if (tips.length >= 2) {
+      const paragraph = await askGroq(items, { name, examTitle, score, total, percent }, model);
+      if (paragraph.length >= 40) {
         resolvedModel = model;
-        return tips.slice(0, 3);
-      }
-      if (tips.length === 1) {
-        const more = await askGroq(items, { name, examTitle, score, total, percent }, model);
-        const merged = [...tips, ...more].filter(Boolean).slice(0, 3);
-        if (merged.length >= 2) {
-          resolvedModel = model;
-          return merged.slice(0, 3);
-        }
+        return [paragraph];
       }
     } catch (err) {
       lastErr = err;

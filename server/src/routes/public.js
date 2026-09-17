@@ -20,9 +20,9 @@ const router = Router();
 
 function handle(err, res) {
   if (err?.name === 'CastError') {
-    return res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'We could not find this quiz.' });
   }
-  res.status(err.status || 500).json({ error: err.message || 'Request failed' });
+  res.status(err.status || 500).json({ error: err.message || 'Something went wrong. Please try again.' });
 }
 
 function answersFromDetails(details) {
@@ -186,8 +186,8 @@ router.post('/attempts/:id/coach', async (req, res) => {
     const existing = Array.isArray(data.attempt?.ai_suggestions)
       ? data.attempt.ai_suggestions.map(String).filter(Boolean)
       : [];
-    if (existing.length >= 2) {
-      return res.json({ suggestions: existing.slice(0, 3) });
+    if (existing.length === 1 && existing[0].length >= 40) {
+      return res.json({ suggestions: existing });
     }
 
     const suggestions = await saveAiTips(req.params.id, {

@@ -12,7 +12,7 @@ export async function api(path, { token, method = 'GET', body, isForm } = {}) {
   });
 
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  if (!res.ok) throw new Error(data.error || 'Something went wrong. Please try again.');
   return data;
 }
 

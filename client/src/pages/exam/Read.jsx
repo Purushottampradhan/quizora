@@ -165,7 +165,7 @@ export default function Read() {
       .finally(() => setLoading(false));
   }
 
-  if (loading) return <Spinner label="Opening notes" />;
+  if (loading) return <Spinner label="Opening your notes" />;
 
   const progress = total ? Math.min(100, Math.round((items.length / total) * 100)) : 0;
 
@@ -204,10 +204,10 @@ export default function Read() {
               <p className="mt-1 font-bold text-[var(--gold)]">{exam.paper_title}</p>
             )}
             {exam.description ? <p className="mt-2 text-[var(--muted)]">{exam.description}</p> : null}
-            <p className="mt-3 text-sm text-[var(--muted)]">Question, answer, and explanation — no options to pick.</p>
+            <p className="mt-3 text-sm text-[var(--muted)]">Read the question, the answer, and why — you do not need to pick an option.</p>
             {pickedUp > 1 && (
               <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-                <span className="chip chip-muted">Picking up at Q {pickedUp}</span>
+                <span className="chip chip-muted">Continuing from question {pickedUp}</span>
                 <button type="button" className="btn btn-ghost px-3 py-1 text-xs" onClick={startOver}>
                   Start from beginning
                 </button>
@@ -226,7 +226,7 @@ export default function Read() {
                 </div>
                 {q.explanation ? (
                   <div className="read-explain">
-                    <p className="text-xs font-extrabold uppercase tracking-wide text-[var(--gold)]">Explanation</p>
+                    <p className="text-xs font-extrabold uppercase tracking-wide text-[var(--gold)]">Why</p>
                     <p className="mt-1 text-[var(--muted)]">{q.explanation}</p>
                   </div>
                 ) : null}
@@ -238,14 +238,14 @@ export default function Read() {
 
           {hasMore ? (
             <button className="btn btn-primary mx-auto mt-6" onClick={loadMore} disabled={busy}>
-              {busy ? 'Loading…' : `Load next ${PAGE} questions`}
+              {busy ? 'Loading…' : `Show next ${PAGE} questions`}
             </button>
           ) : (
             <p className="mt-6 text-center text-sm text-[var(--muted)]">You have read all {total} questions.</p>
           )}
         </>
       ) : (
-        <p className="mt-10 text-[var(--danger)]">{error || 'Notes not found'}</p>
+        <p className="mt-10 text-[var(--danger)]">{error || 'We could not find these notes.'}</p>
       )}
     </div>
   );

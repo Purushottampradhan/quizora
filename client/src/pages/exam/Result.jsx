@@ -24,12 +24,12 @@ export default function Result() {
         const existing = Array.isArray(res.attempt?.ai_suggestions)
           ? res.attempt.ai_suggestions.map(String).filter(Boolean)
           : [];
-        if (existing.length >= 2) {
-          setTips(existing.slice(0, 3));
+        if (existing.length === 1 && existing[0].length >= 40) {
+          setTips(existing);
           setAiStatus('ready');
           return;
         }
-        if (existing.length) setTips(existing);
+        if (existing.length === 1) setTips(existing);
         setAiStatus('loading');
         try {
           const coached = await api(`/api/public/attempts/${attemptId}/coach`, { method: 'POST' });
@@ -38,7 +38,7 @@ export default function Result() {
             ? coached.suggestions.map(String).filter(Boolean)
             : [];
           if (next.length) {
-            setTips(next.slice(0, 3));
+            setTips(next.slice(0, 1));
             setAiStatus('ready');
           } else {
             setAiStatus(existing.length ? 'ready' : 'missing');
@@ -60,12 +60,12 @@ export default function Result() {
       <div className="p-6">
         <p className="text-[var(--danger)]">{error}</p>
         <Link className="btn btn-ghost mt-4 inline-flex" to={`/e/${slug}`}>
-          Back to start
+          Back to the quiz
         </Link>
       </div>
     );
   }
-  if (!data) return <Spinner label="Crunching results" />;
+  if (!data) return <Spinner label="Getting your results" />;
 
   const { attempt, exam, details } = data;
   const maxScore = Number(attempt.max_score) || attempt.total_questions || details.length;
@@ -81,26 +81,30 @@ export default function Result() {
           <p className="mt-1 text-[var(--gold)]">{exam.paper_title}</p>
         )}
         <p className="mt-2 text-xs font-extrabold tracking-wide text-[var(--coral-2)]">
-          {attempt.mode === 'practice' ? 'PRACTICE' : 'EXAM'}
+          {attempt.mode === 'practice' ? 'PRACTICE' : 'QUIZ'}
         </p>
         <div className="score-ring mx-auto mt-6" style={{ '--p': pct }}>
           <div className="score-inner">
             {formatMarks(attempt.score)}/{formatMarks(maxScore)}
           </div>
         </div>
-        <p className="mt-4 text-lg font-bold">{pct}% · {formatDuration(attempt.time_taken_ms)} total</p>
-        <p className="text-sm text-[var(--muted)]">
-          {attempt.correct_count ?? '—'} correct · {attempt.wrong_count ?? 0} wrong · {attempt.skip_count ?? 0} skipped
-          {Number(attempt.minus_mark) > 0 ? ` · +${formatMarks(attempt.plus_mark)} / −${formatMarks(attempt.minus_mark)}` : ''}
+        <p className="mt-4 text-lg font-bold">
+          You scored {pct}% · Time taken {formatDuration(attempt.time_taken_ms)}
         </p>
         <p className="text-sm text-[var(--muted)]">
-          Average {formatDuration((attempt.time_taken_ms || 0) / Math.max(1, details.length))} per question
+          {attempt.correct_count ?? '—'} right · {attempt.wrong_count ?? 0} not right · {attempt.skip_count ?? 0} skipped
+          {Number(attempt.minus_mark) > 0
+            ? ` · +${formatMarks(attempt.plus_mark)} for a right answer, −${formatMarks(attempt.minus_mark)} for a wrong answer`
+            : ''}
+        </p>
+        <p className="text-sm text-[var(--muted)]">
+          About {formatDuration((attempt.time_taken_ms || 0) / Math.max(1, details.length))} on each question
         </p>
       </section>
 
       <section className="mt-8">
-        <h2 className="font-display text-2xl font-bold">Answer review</h2>
-        <p className="mt-1 text-[var(--muted)]">Your pick, the correct one, and why.</p>
+        <h2 className="font-display text-2xl font-bold">Check your answers</h2>
+        <p className="mt-1 text-[var(--muted)]">See what you chose, the right answer, and why.</p>
         <div className="mt-4 grid gap-3">
           {details.map((q) => (
             <article key={q.number} className="glass rounded-3xl p-4">
@@ -115,7 +119,7 @@ export default function Result() {
                       ? 'bg-rose-400/15 text-[var(--danger)]'
                       : 'bg-amber-400/15 text-[var(--gold)]'
                 }`}>
-                  {q.is_correct ? 'Correct' : q.selected_option ? 'Wrong' : 'Skipped'} · {formatDuration(q.time_spent_ms)}
+                  {q.is_correct ? 'Right' : q.selected_option ? 'Not right' : 'Skipped'} · {formatDuration(q.time_spent_ms)}
                 </span>
               </div>
               <div className="mt-3 grid gap-2">
@@ -133,7 +137,7 @@ export default function Result() {
                       <span className="pt-1">
                         {q[`option_${letter.toLowerCase()}`]}
                         {selected && <em className="ml-2 text-xs not-italic text-[var(--muted)]">your answer</em>}
-                        {correct && <em className="ml-2 text-xs not-italic text-[var(--mint)]">correct</em>}
+                        {correct && <em className="ml-2 text-xs not-italic text-[var(--mint)]">right answer</em>}
                       </span>
                     </div>
                   );
@@ -151,24 +155,15 @@ export default function Result() {
       </section>
 
       <section className="mt-10 mb-10">
-        <h2 className="font-display text-2xl font-bold">What to improve next</h2>
-        <p className="mt-1 text-[var(--muted)]">2–3 AI tips based on your answers.</p>
+        <h2 className="font-display text-2xl font-bold">How you can do better</h2>
+        <p className="mt-1 text-[var(--muted)]">A short note about how you did on this quiz.</p>
         {tips.length ? (
-          <ol className="mt-4 grid gap-2">
-            {tips.slice(0, 3).map((tip, i) => (
-              <li key={i} className="glass flex gap-3 rounded-2xl p-4">
-                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-[var(--coral)] font-extrabold text-[#2a0b12]">
-                  {i + 1}
-                </span>
-                <p className="pt-1 leading-relaxed">{tip}</p>
-              </li>
-            ))}
-          </ol>
+          <p className="glass mt-4 rounded-2xl p-4 leading-relaxed">{tips[0]}</p>
         ) : aiStatus === 'loading' || aiStatus === 'idle' ? (
-          <p className="glass mt-4 rounded-2xl p-4 text-[var(--muted)]">Writing your AI tips…</p>
+          <p className="glass mt-4 rounded-2xl p-4 text-[var(--muted)]">Writing a short note for you…</p>
         ) : (
           <p className="glass mt-4 rounded-2xl p-4 text-[var(--muted)]">
-            Could not generate AI tips. Refresh this page to try again.
+            We could not write your study note. Refresh the page to try again.
           </p>
         )}
       </section>

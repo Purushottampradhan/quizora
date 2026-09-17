@@ -16,13 +16,13 @@ export default function Home() {
       <section className="mt-10 grid gap-8 lg:grid-cols-2 lg:items-center">
         <div>
           <p className="mb-3 inline-flex rounded-full border border-white/15 bg-white/5 px-3 py-1 text-xs font-bold tracking-wide text-[var(--coral-2)]">
-            LIVE MCQ EXAMS
+            LIVE QUIZZES
           </p>
           <h1 className="font-display text-4xl font-extrabold leading-tight sm:text-5xl">
             Quizzes that feel quick, clear, and a little addictive.
           </h1>
           <p className="mt-4 max-w-md text-lg text-[var(--muted)]">
-            Create an exam, upload questions, share one link. Students type their name, tap answers, and get a full review plus AI study tips.
+            Make a quiz, add questions, and share one link. Students type their name, tap answers, and then see their score plus a short study note.
           </p>
           <div className="mt-6 flex flex-wrap gap-3">
             <Link className="btn btn-primary" to="/admin/login">
@@ -33,7 +33,7 @@ export default function Home() {
         <div className="glass rounded-3xl p-5">
           <div className="mb-4 flex items-center justify-between text-sm text-[var(--muted)]">
             <span>Question 3 of 10</span>
-            <span className="text-[var(--mint)]">4 done · 6 left</span>
+            <span className="text-[var(--mint)]">4 answered · 6 left</span>
           </div>
           <div className="progress-track mb-5">
             <div className="progress-fill" style={{ width: '30%' }} />
@@ -56,9 +56,9 @@ export default function Home() {
 
       <section id="how" className="mt-16 grid gap-4 sm:grid-cols-3">
         {[
-          ['Share a link', 'Generate a unique exam URL. Anyone with it can start instantly — no student accounts.'],
-          ['Tap and flow', 'Pick an option and the next question opens. Jump around from the number bar anytime.'],
-          ['Learn the why', 'After submit: score, per-question time, explanations, and 2–3 AI tips from your answers.'],
+          ['Share a link', 'Send one link. Anyone with it can start at once — they do not need an account.'],
+          ['Tap and go', 'Pick an answer and the next question opens. Use the numbers to jump around anytime.'],
+          ['See how you did', 'After you finish: your score, the right answers, why, and a short note on the whole quiz.'],
         ].map(([title, body]) => (
           <div key={title} className="glass rounded-3xl p-5">
             <h3 className="font-display text-lg font-bold">{title}</h3>

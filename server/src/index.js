@@ -74,7 +74,7 @@ app.get('/e/:slug', async (req, res, next) => {
     );
   } catch (err) {
     if (err.status === 404) {
-      res.status(404).type('html').send('Exam not found');
+      res.status(404).type('html').send('This quiz was not found.');
       return;
     }
     next(err);
@@ -86,13 +86,13 @@ app.use('/api/public', publicRoutes);
 
 app.use((err, _req, res, _next) => {
   if (err?.name === 'CastError') {
-    return res.status(404).json({ error: 'Not found' });
+    return res.status(404).json({ error: 'We could not find this quiz.' });
   }
   if (err?.status) {
     return res.status(err.status).json({ error: err.message });
   }
   console.error(err);
-  res.status(500).json({ error: err.message || 'Server error' });
+  res.status(500).json({ error: 'Something went wrong. Please try again.' });
 });
 
 await connectDb();

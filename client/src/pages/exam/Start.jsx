@@ -50,7 +50,7 @@ export default function Start() {
     }
   }
 
-  if (loading) return <Spinner label="Opening exam" />;
+  if (loading) return <Spinner label="Opening your quiz" />;
   if (exam?.mode === 'read') return <Navigate to={`/e/${slug}/read`} replace />;
 
   return (
@@ -63,7 +63,7 @@ export default function Start() {
           ) : null}
           <div className="p-6">
             <p className="text-xs font-extrabold tracking-wide text-[var(--coral-2)]">
-              {exam.mode === 'practice' ? 'PRACTICE' : 'EXAM'}
+              {exam.mode === 'practice' ? 'PRACTICE' : 'QUIZ'}
             </p>
             <h1 className="font-display mt-2 text-3xl font-extrabold">{exam.title}</h1>
             {exam.paper_title && exam.paper_title !== exam.title && (
@@ -73,17 +73,18 @@ export default function Start() {
             <div className="mt-4 flex flex-wrap gap-2 text-sm">
               <span className="chip chip-muted">{exam.question_count} questions</span>
               {exam.duration_minutes ? (
-                <span className="chip chip-coral">{exam.duration_minutes} min limit</span>
+                <span className="chip chip-coral">{exam.duration_minutes} min time limit</span>
               ) : (
                 <span className="chip chip-muted">No time limit</span>
               )}
               <span className="chip chip-muted">
-                +{exam.plus_mark ?? 1}
-                {Number(exam.minus_mark) > 0 ? ` / −${exam.minus_mark} wrong` : ' · no negative'}
+                {Number(exam.minus_mark) > 0
+                  ? `+${exam.plus_mark ?? 1} for right, −${exam.minus_mark} for wrong`
+                  : `+${exam.plus_mark ?? 1} for a right answer`}
               </span>
-              {exam.shuffle_questions && <span className="chip chip-violet">Shuffled questions</span>}
-              {exam.shuffle_options && <span className="chip chip-violet">Shuffled options</span>}
-              {exam.allow_multiple === false && <span className="chip chip-coral">One attempt only</span>}
+              {exam.shuffle_questions && <span className="chip chip-violet">Questions in mixed order</span>}
+              {exam.shuffle_options && <span className="chip chip-violet">Answers in mixed order</span>}
+              {exam.allow_multiple === false && <span className="chip chip-coral">You can take this only once</span>}
             </div>
             <form className="mt-6 grid gap-3" onSubmit={start}>
               <label className="grid gap-1 text-sm font-bold">
@@ -100,25 +101,25 @@ export default function Start() {
               </label>
               {error && <p className="text-sm text-[var(--danger)]">{error}</p>}
               <button className="btn btn-primary mt-1" disabled={busy || !exam.question_count}>
-                {busy ? 'Starting…' : 'Start exam'}
+                {busy ? 'Starting…' : exam.question_count ? 'Start quiz' : 'No questions yet'}
               </button>
             </form>
             <ul className="mt-5 grid gap-1 text-sm text-[var(--muted)]">
-              <li>Tap an option — next question opens on its own.</li>
-              <li>Jump to any number in the bar if you want to skip or change.</li>
+              <li>Tap an answer. The next question opens by itself.</li>
+              <li>Use the numbers to jump to any question, skip, or change an answer.</li>
               <li>
                 {exam.mode === 'practice'
-                  ? 'Practice: after you tap, you see the correct answer and explanation, then Next.'
-                  : 'Exam: answers stay hidden until you submit. Then you get score, explanations, and AI tips.'}
+                  ? 'Practice: after you tap, you see the right answer and why, then tap Next.'
+                  : 'Quiz: you will not see if you are right until you finish. Then you get your score, the explanations, and a short note on how you did.'}
               </li>
               {exam.allow_multiple === false && (
-                <li>One attempt per IP: this network cannot start again after submit.</li>
+                <li>You can take this quiz only once. After you submit, you cannot start again.</li>
               )}
             </ul>
           </div>
         </div>
       ) : (
-        <p className="mt-10 text-[var(--danger)]">{error || 'Exam not found'}</p>
+        <p className="mt-10 text-[var(--danger)]">{error || 'We could not find this quiz.'}</p>
       )}
     </div>
   );
